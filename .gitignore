@@ -1,0 +1,7 @@
+# fleet gitignore
+# secrets/inputs are never committed
+inputs/
+*.env.local
+# scratch and state
+.tmp/
+*.log
