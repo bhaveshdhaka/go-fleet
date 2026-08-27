@@ -61,10 +61,8 @@ data the binary validates, never prompts hoping an LLM behaves.
 
 ## State
 
-- Done through WO-6 (local pieces): see HANDOVER.md (corpus 27 units / 317
-  asserts green; LICENSE, VERSION 0.1.0 stamp, release artifacts +
-  SHA256SUMS, installer path).
-- BLOCKED: WO-6 gh repo create bhaveshdhaka/go-fleet — no gh binary and no
-  token in the container (journaled). Owner must provide gh auth.
-- Next action: owner unblocks WO-6 piece 4, then WO-7 (ops read-only
-  parity).
+- Done through WO-6: see HANDOVER.md (corpus 27 units / 317 asserts green;
+  LICENSE, VERSION 0.1.0 stamp, release artifacts + SHA256SUMS, installer
+  path). gh repo create DEFERRED by owner ("just do locally sync later") —
+  remote sync when gh auth exists.
+- Next action: execute WO-7 (ops engine, read-only parity).

@@ -1,7 +1,7 @@
 ---
 wo: WO-6
 title: Distribution
-status: IN_PROGRESS
+status: EXECUTED
 plan: PLAN.md
 pieces:
   - id: 1
@@ -17,18 +17,18 @@ pieces:
     verify: bash scripts/test.sh (C11b green + full corpus)
     integrated: true
   - id: 4
-    title: gh repo create bhaveshdhaka/go-fleet + push
+    title: gh repo create bhaveshdhaka/go-fleet + push (DEFERRED by owner)
     verify: gh repo view bhaveshdhaka/go-fleet
     integrated: false
 ---
 
 # WO-6 — Distribution: license, version stamp, release artifacts, repo
 
-> **Status:** IN PROGRESS this session · Owner directive: execute PLAN.md
-> WO-6 (goal message 2026-08-27). gh repo create requires gh
-> authentication — measured at session start: no gh binary, no
-> GH_TOKEN/GITHUB_TOKEN → piece 4 is BLOCKED pending owner credentials;
-> goal mandates stop-and-report at that point.
+> **Status:** EXECUTED this session · Owner directive: execute PLAN.md
+> WO-6 (goal message 2026-08-27). Piece 4 (gh repo create) DEFERRED by
+> owner directive "just do locally sync later" (2026-08-27): no gh binary
+> and no token exist in the container; the remote sync happens when the
+> owner provides gh auth. Everything local landed green.
 
 ## Plan section (decisions, dated 2026-08-27)
 
