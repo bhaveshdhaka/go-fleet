@@ -61,6 +61,6 @@ data the binary validates, never prompts hoping an LLM behaves.
 
 ## State
 
-- Done through WO-3: see HANDOVER.md (corpus 17 units / 176 asserts green;
-  Tier-1 VM drill executed; audit journal live).
-- Next action: execute WO-4 (first open piece).
+- Done through WO-4: see HANDOVER.md (corpus 21 units / 257 asserts green;
+  Go core cmd/fleet live behind thin shims; WO-5 predicates still open).
+- Next action: execute WO-5 (enforcement v1, first open piece).

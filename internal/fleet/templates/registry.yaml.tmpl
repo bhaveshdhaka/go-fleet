@@ -1,0 +1,11 @@
+# ops/PROJECTS.yaml — fleet PROJECT MASTER REGISTRY (deployment INTENT).
+# This file declares WHAT exists. Runtime truth lives in ops/state/ and is
+# written ONLY by ./fleet. Agents: read this first; never hand-edit state
+# files; register new components with `./scripts/fleet onboard <name>`.
+#
+# Required keys per component entry:
+#   name | kind | path | description | entrypoint | pipeline | enabled
+
+registry_version: 1
+
+components:

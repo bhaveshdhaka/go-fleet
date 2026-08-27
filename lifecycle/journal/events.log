@@ -7,3 +7,14 @@ ts=2026-08-27T14:27:33Z event=approved component=fleetctl stage=prod actor=owner
 ts=2026-08-27T14:27:45Z event=promoted component=fleetctl from=built to=dev actor=owner-via-agent
 ts=2026-08-27T14:27:46Z event=promoted component=fleetctl from=dev to=stage actor=owner-via-agent
 ts=2026-08-27T14:28:43Z event=promoted component=fleetctl from=stage to=prod actor=owner-via-agent
+# verify wo=WO-4 piece=1 cmd="go vet ./... + ci/build-fleet.sh x2" result=PASS byte_identical=2af611c5 version=fleet-1.27.0 vet=clean
+# verify wo=WO-4 piece=1 cmd="bash scripts/test.sh" result=PASS units=17 pass=176 fail=0 skip=0
+# verify wo=WO-4 piece=2 cmd="go vet + go test ./internal/fleet" result=PASS vet=clean tests=ok gofmt=clean
+# verify wo=WO-4 piece=2 cmd="bash scripts/test.sh" result=PASS units=17 pass=176 fail=0 skip=0
+# verify wo=WO-4 piece=3 cmd="twin-repo scenario drill (40-line contract transcript)" result=PASS transcript=identical state=identical journal=identical approvals=identical
+# verify wo=WO-4 piece=3 cmd="bash scripts/test.sh" result=PASS units=17 pass=176 fail=0 skip=0
+# incident wo=WO-4 piece=4 smoke-drill used empty FLEET_ROOT + cwd walk-up from the live repo; cmd/fleet onboard demo appended one registry block to live ops/PROJECTS.yaml; state/journal/approvals untouched; block restored via git checkout, doctor ALL CLEAR re-verified. Lesson recorded: drills always run from a neutral cwd with FLEET_ROOT pinned to the scratch copy.
+# verify wo=WO-4 piece=4 cmd="scratch smoke: init/idempotent, onboard+doctor ALL CLEAR, next, wo list/new/show, verify journals # verify line" result=PASS
+# verify wo=WO-4 piece=4 cmd="bash scripts/test.sh" result=PASS units=17 pass=176 fail=0 skip=0
+# verify wo=WO-4 piece=5 cmd="C9a+C9b+C9c+C9d targeted" result=PASS pass=71 fail=0
+# verify wo=WO-4 piece=5 cmd="bash scripts/test.sh (full corpus, integration gate)" result=PASS units=21 pass=257 fail=0 skip=0

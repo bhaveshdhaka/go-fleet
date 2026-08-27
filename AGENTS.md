@@ -11,16 +11,27 @@ Two-file rule of this repo:
     ./scripts/fleet status [component]     # registered components + stage
     ./scripts/fleet doctor                 # READ-ONLY drift check; run FIRST
                                            # whenever anything looks wrong
+    ./scripts/fleet next                   # READ-ONLY guidance: next legal action
+    ./scripts/fleet wo list|show|new ...   # workorder surface (minimal)
+    ./scripts/fleet init [dir]             # scaffold the SDLC file skeleton
+    ./scripts/fleet onboard <name>         # register component (+pipeline+state)
+    ./scripts/fleet verify [units...]      # run corpus units, journal the result
     ./scripts/fleet approve <c> <dev|prod> # write sign-off file + journal line
     ./scripts/fleet promote <c> <stage>    # gated transition; refuses when
                                            # [--dry-run] [--skip-gates] # unsafe
     bash scripts/test.sh [units...]        # deterministic DAG test runner
 
+Since WO-4 the CLI is the Go core (cmd/fleet) behind thin shims
+(scripts/fleet, ci/promote.sh); the bash corpus stays the black-box test
+spine.
+
 ## Rules
 
-1. Mutations happen ONLY through ./fleet (approve/promote) and the numbered
-   block scripts under scripts/blocks/ (00–04). No ad-hoc kubectl/curl/mv.
-2. doctor, status, and any --dry-run are read-only. Everything else mutates.
+1. Mutations happen ONLY through ./fleet (init/onboard/approve/promote/
+   verify/wo new) and the numbered block scripts under scripts/blocks/
+   (00–04). No ad-hoc kubectl/curl/mv.
+2. doctor, status, next, wo list/show, and any --dry-run are read-only.
+   init, onboard, wo new, approve, promote and verify mutate.
 3. promote RE-RUNS its listed test units right now; stale green logs count
    for nothing. If it refuses, report exact stderr to the owner. Do not
    improvise workarounds.

@@ -87,7 +87,8 @@ Delete the `.toolchain` folder inside this project. Done.
     scripts/blocks/01..04     idempotent blocks (k3s wiring, toolchain,
                               go pipeline, k8s apply); strict --dry-run:
                               byte-identical plan, zero mutation
-    scripts/fleet             control-plane CLI (see AGENTS.md rules)
+    scripts/fleet             control-plane CLI — thin shim over the Go core
+                              (cmd/fleet, module go-fleet; see AGENTS.md rules)
     ci/promote.sh             gate engine: legal hops, approvals checked,
                               gate test units RE-RUN at promotion time
     ops/PROJECTS.yaml         master registry = deployment INTENT

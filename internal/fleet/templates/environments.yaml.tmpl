@@ -1,0 +1,22 @@
+# ops/ENVIRONMENTS.yaml — environment definitions.
+# dev/stage are Tier-0 rehearsal targets (local only); prod means a real
+# cluster context reachable via kubectl. Applied ONLY by block 04 / ./fleet.
+
+environments_version: 1
+
+environments:
+
+  - name: dev
+    target: local-dryrun
+    requires_cluster: false
+    note: client-side rehearsal via kubectl --dry-run=client
+
+  - name: stage
+    target: local-dryrun
+    requires_cluster: false
+    note: second dry-run pass after dev approvals
+
+  - name: prod
+    target: cluster:k3s-lab
+    requires_cluster: true
+    note: real apply — VM tier only, never in container tests

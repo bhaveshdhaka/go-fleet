@@ -1,154 +1,26 @@
 #!/usr/bin/env bash
-# scripts/fleet — THE single control-plane CLI for this repo (agents included).
-#
-# Commands (all output deterministic KEY=value lines, stable ordering):
-#   ./fleet status [component]          read-only
-#   ./fleet doctor                      READ-ONLY drift check (run FIRST always)
-#   ./fleet registry-check              strict registry consistency; rc!=0 fails CI
-#   ./fleet approve <c> <dev|prod>      record sign-off file + journal
-#   ./fleet promote <c> <built..prod> [--dry-run] [--skip-gates]
-# Rules of the house live in AGENTS.md at the repo root.
+# scripts/fleet — control-plane entrypoint (WO-4: thin shim over the Go core).
+# The logic lives in cmd/fleet; this shim guarantees a fresh byte-reproducible
+# binary (ci/build-fleet.sh, pinned toolchain, GOPROXY=off) and pins
+# FLEET_ROOT so the binary NEVER resolves the repo by walking up from its
+# own location (rule-7 discipline: no ambient resolution, ever).
 
 set -uo pipefail
 FLEET_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export FLEET_ROOT
+BIN="$FLEET_ROOT/dist/fleet"
 
-REG="$FLEET_ROOT/ops/PROJECTS.yaml"
-ENVY="$FLEET_ROOT/ops/ENVIRONMENTS.yaml"
-STATE="$FLEET_ROOT/ops/state/deployments.yaml"
-JOURNAL="$FLEET_ROOT/lifecycle/journal/events.log"
-APPR="$FLEET_ROOT/lifecycle/approvals"
-PROMOTE="$FLEET_ROOT/ci/promote.sh"
-
-fail() { printf '%s\n' "$@" >&2; exit 1; }
-[[ -f "$REG" ]] || fail "FLEET ERROR :: registry missing at $REG"
-
-registry_components() { sed -n 's/^  - name: //p' "$REG"; }
-field_for() { # field_for <name> <key> -> value inside that component block
-  awk -v c="$1" -v k="$2" '
-    index($0,"  - name: "c)==1 {inblk=1; next}
-    inblk && /^  - name:/ {exit}
-    inblk && $0 ~ "^    "k":" {
-      v=$0; sub("^.*"k":[[:space:]]*","",v); gsub(/^["'"'"']|["'"'"']$/,"",v); print v; exit}
-  ' "$REG"
-}
-state_stage() {
-  awk -v c="$1" '
-    index($0,"  - name: "c)==1 {inblk=1; next}
-    inblk && /^  - name:/ {exit}
-    inblk && /^[[:space:]]*stage:/ {sub(/^[[:space:]]*stage:[[:space:]]*/,""); print; exit}
-  ' "$STATE"
+stale() {
+  [[ -x "$BIN" ]] || return 0
+  local newer
+  newer="$(find "$FLEET_ROOT/go.mod" "$FLEET_ROOT/cmd" "$FLEET_ROOT/internal" \
+    "$FLEET_ROOT/ci/build-fleet.sh" "$FLEET_ROOT/toolchain.env" \
+    -newer "$BIN" -print -quit 2>/dev/null)"
+  [[ -n "$newer" ]]
 }
 
-# ---------------------------------------------------------------- status ----
-do_status() {
-  local sel=${1:-} n=0 c stage kind
-  while IFS= read -r c; do
-    [[ -n "$sel" && "$c" != "$sel" ]] && continue
-    kind="$(field_for "$c" kind)"
-    stage="$(state_stage "$c")"
-    printf 'STATUS component=%s kind=%s stage=%s\n' "$c" "${kind:-?}" "${stage:-?}"
-    n=$((n + 1))
-  done < <(registry_components)
-  printf 'STATUS SUMMARY components=%d\n' "$n"
-}
+if stale; then
+  bash "$FLEET_ROOT/ci/build-fleet.sh" "$BIN" >/dev/null || exit 1
+fi
 
-# ---------------------------------------------------------------- doctor ----
-doctor_problems=0
-problem() { printf 'DOCTOR ISSUE :: %s\n' "$1"; doctor_problems=$((doctor_problems + 1)); }
-
-check_path_field() { # check_path_field <comp> <field-label> <value-or-empty>
-  local p="$3"
-  [[ -z "$p" ]] && problem "registry: $1 has empty $2" && return 0
-  [[ -e "$FLEET_ROOT/$p" ]] || problem "registry: $1 $2 '$p' does not exist on disk"
-}
-
-legal_stage() { case "$1" in built|dev|stage|prod) return 0 ;; *) return 1 ;; esac; }
-
-gate_units() {
-  awk '
-    /^[[:space:]]+-[[:space:]]+from:/ { ingate=1 }
-    ingate && /requires_units:/ {sec=1; next}
-    ingate && /needs_approvals:/ {sec=0}
-    sec && /^[[:space:]]+-[[:space:]]/ { item=$0; sub(/.*-[[:space:]]+/,"",item);
-      gsub(/[[:space:]]/,"",item); print item }
-    /^[[:alpha:]_]/ { ingate=0; sec=0 }
-  ' "$FLEET_ROOT/lifecycle/gates.yaml" | sort -u
-}
-
-do_doctor() {
-  local c stage cnt=0
-  while IFS= read -r c; do
-    check_path_field "$c" path "$(field_for "$c" path)"
-    check_path_field "$c" pipeline "$(field_for "$c" pipeline)"
-    check_path_field "$c" manifests "$(field_for "$c" manifests)"
-    stage="$(state_stage "$c")"
-    legal_stage "$stage" || problem "state: component $c illegal stage '$stage'"
-    cnt=$((cnt + 1))
-  done < <(registry_components)
-
-  while IFS= read -r u; do
-    [[ -d "$FLEET_ROOT/tests/$u" ]] || problem "gates: references unknown unit '$u'"
-  done < <(gate_units | sort -u)
-
-  local ln bad_line=0
-  while IFS= read -r ln; do
-    [[ -z "$ln" || "$ln" == "#"* ]] && continue
-    printf '%s\n' "$ln" \
-      | grep -Eq '^ts=[^ ]+ event=(approved|promoted|rejected) component=[A-Za-z0-9._-]+' \
-      || { problem "journal: malformed line: ${ln:0:80}"; bad_line=1; break; }
-  done <"$JOURNAL"
-
-  if (( doctor_problems == 0 )); then
-    printf 'DOCTOR OK checked_components=%d issues=0\n' "$cnt"
-    return 0
-  fi
-  printf 'DOCTOR FAIL checked_components=%d issues=%d\n' "$cnt" "$doctor_problems"
-  return 1
-}
-
-# --------------------------------------------------------- registry-check ---
-do_registry_check() {
-  do_doctor >/dev/null 2>&1
-  local out rc=$?
-  do_doctor
-}
-
-# ---------------------------------------------------------------- approve ---
-allow_approval_stage() { case "$1" in dev|prod) return 0 ;; *) return 1 ;; esac; }
-
-do_approve() {
-  local comp=${1:-} stg=${2:-} who=${3:-${FLEET_ACTOR:-agent}}
-  [[ -n "$comp" && -n "$stg" ]] || fail "usage: fleet approve <component> <dev|prod> [approver]"
-  grep -Eq "^  - name: ${comp}[[:space:]]*\$" "$REG" || fail "FLEET ERROR :: unknown component '$comp'"
-  allow_approval_stage "$stg" \
-    || fail "FLEET ERROR :: approvals apply to dev or prod only (got '$stg')"
-
-  mkdir -p "$APPR/$stg"
-  f="$APPR/$stg/$comp.approved"
-  if [[ -s "$f" ]]; then
-    printf 'ALREADY APPROVED component=%s stage=%s\n' "$comp" "$stg"
-    return 0
-  fi
-  printf 'approved_by=%s\nts=%s\n' "$who" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >"$f"
-  printf 'ts=%s event=approved component=%s stage=%s actor=%s\n' \
-    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$comp" "$stg" "$who" >>"$JOURNAL"
-  printf 'APPROVED component=%s stage=%s file=%s\n' "$comp" "$stg" "${f#$FLEET_ROOT/}"
-}
-
-case "${1:-}" in
-  status) shift; do_status "$@" ;;
-  doctor|registry-check) shift; do_doctor "$@" ;;
-  approve) shift; do_approve "$@" ;;
-  promote) shift; exec bash "$PROMOTE" "$@" ;;
-  ""|-h|--help) cat <<EOF
-$0 <command>
-  status [component]                     read-only snapshot
-  doctor                                 read-only drift check
-  registry-check                         alias of doctor for CI gates
-  approve <component> <dev|prod> [who]   write approval file + journal
-  promote <component> <to-stage> [...]   gated transition via ci/promote.sh
-EOF
-    ;;
-  *) fail "unknown command '$1' (see --help)" ;;
-esac
+exec "$BIN" "$@"

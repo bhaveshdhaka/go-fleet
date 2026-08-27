@@ -1,0 +1,28 @@
+# lifecycle/gates.yaml — transition gates.
+# requires_units = fleet test units that MUST pass (re-run) before promote.
+# needs_approvals = approval files required to already exist.
+# Start with empty gates; add units and approvals as the project grows.
+# Every referenced unit must exist under tests/<unit>/run.sh (fleet doctor
+# goes ALL CLEAR only then).
+
+gates_version: 1
+
+gates:
+
+  - from: built
+    to: dev
+    requires_units: []
+    needs_approvals: []
+
+  - from: dev
+    to: stage
+    requires_units: []
+    needs_approvals:
+      - dev
+
+  - from: stage
+    to: prod
+    requires_units: []
+    needs_approvals:
+      - dev
+      - prod
