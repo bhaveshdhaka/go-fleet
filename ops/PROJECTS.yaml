@@ -1,0 +1,33 @@
+# ops/PROJECTS.yaml — fleet PROJECT MASTER REGISTRY (deployment INTENT).
+# This file declares WHAT exists. Runtime truth lives in ops/state/ and is
+# written ONLY by scripts/fleet. Agents: read this first; never hand-edit
+# state files; register new components by appending an entry here.
+#
+# Required keys per component entry:
+#   name | kind | path | description | entrypoint | pipeline | enabled
+
+registry_version: 1
+
+components:
+
+  - name: fleetctl
+    kind: cli
+    path: apps/fleetctl
+    language: go
+    entrypoint: main.go
+    pipeline: ci/pipelines/fleetctl.yaml
+    manifests: infra/k8s
+    description: sample stdlib-only CLI proving the hermetic build tier
+    enabled: true
+
+  - name: fleethub
+    kind: service
+    port: 8099
+    bind_default: 127.0.0.1:8099
+    path: apps/fleethub
+    language: go
+    entrypoint: main.go
+    pipeline: ci/pipelines/fleethub.yaml
+    manifests: infra/k8s
+    description: registry + lifecycle dashboard (read) with approval writer
+    enabled: true

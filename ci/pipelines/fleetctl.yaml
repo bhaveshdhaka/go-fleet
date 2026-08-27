@@ -1,0 +1,14 @@
+# ci/pipelines/fleetctl.yaml
+component: fleetctl
+language: go
+build_block: scripts/blocks/03-pipeline.sh
+manifests_dir: infra/k8s
+gates_file: lifecycle/gates.yaml
+targets:
+  dev:
+    mode: dryrun-client
+  stage:
+    mode: dryrun-client
+  prod:
+    mode: cluster-apply
+    note: VM tier only

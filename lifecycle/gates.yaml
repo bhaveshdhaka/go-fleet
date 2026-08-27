@@ -1,0 +1,31 @@
+# lifecycle/gates.yaml — transition gates.
+# requires_units = fleet test units that MUST pass (re-run) before promote.
+# needs_approvals = approval files required to already exist.
+
+gates_version: 1
+
+gates:
+
+  - from: built
+    to: dev
+    requires_units:
+      - C3c_build_reproducible
+    needs_approvals: []
+
+  - from: dev
+    to: stage
+    requires_units:
+      - C3c_build_reproducible
+      - C4a_deploy_static
+    needs_approvals:
+      - dev
+
+  - from: stage
+    to: prod
+    requires_units:
+      - C3c_build_reproducible
+      - C4a_deploy_static
+      - C6c_webapp_contract
+    needs_approvals:
+      - dev
+      - prod
