@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fleetctl
+  namespace: fleet-lab
+  labels:
+    app.kubernetes.io/name: fleetctl
+    app.kubernetes.io/part-of: fleet-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fleetctl
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: fleetctl
+        app.kubernetes.io/part-of: fleet-lab
+    spec:
+      containers:
+        - name: fleetctl
+          image: localhost/fleet/fleetctl:local # built by block 03; registry-pushed by ops drill
+          command: ["/fleetctl", "version"]
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
