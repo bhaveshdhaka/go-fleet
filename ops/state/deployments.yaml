@@ -7,8 +7,8 @@ state_version: 1
 components:
 
   - name: fleetctl
-    stage: built
-    last_promoted_at: ""
+    stage: prod
+    last_promoted_at: "2026-08-27T14:28:43Z"
     note: fresh checkout baseline
 
   - name: fleethub

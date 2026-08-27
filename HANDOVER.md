@@ -33,9 +33,13 @@ master @ 5e43e61 = C0 harness + C1a/b/c + C2a packages.
 - install.sh agent smoke in minimal container: FLEET_INSTALL_OK,
   restic honestly skipped without bzip2, machine lines as contracted.
 
+## Tier-1 drilled THIS session (see workorders/WO-3.md)
+- Real Ubuntu 24.04 in userspace QEMU (no sudo/kvm), real k3s v1.36.3+k3s1,
+  fleetctl promoted built→prod with gates, live-applied, pod printed
+  `fleetctl 1.27.0`, bad-rollout undo drill passed. C7a + vm-tier committed.
+
 ## Open for next session (agents read me FIRST)
-1. Tier-1 VM drill script (scripts/test-onvm.sh) remains unbuilt — real k3s
-   daemon + live apply + rollback drill on a disposable Ubuntu host.
-2. Commit split awaiting owner: fix-block / C3 / C4 / C5 / C6(+docs).
+1. Commit split awaiting owner: C7 VM tier + WO-3 + registry/state updates.
+2. `down.sh` grace path + VM snapshot/restore for faster repeat drills.
 3. Possible future: registry-driven manifest templating once more than one
    real service ships through prod.

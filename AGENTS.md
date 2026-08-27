@@ -32,6 +32,21 @@ Two-file rule of this repo:
 6. Machine contract: every mutating command ends with one summary line
    (STATUS SUMMARY / DOCTOR OK|FAIL / PROMOTED|ALREADY AT / APPROVED) that
    agents parse; keep those formats stable.
+7. NEVER rely on ambient cluster credentials. Every kubectl call that is
+   not meant for the real lab cluster MUST set KUBECONFIG explicitly
+   (e.g. the drill's .vm/run/kubeconfig). An env-level fallback once hit
+   hk-03-dev by accident — that failure mode is forbidden.
+
+## Execution tiers
+
+| Tier | What | Where | Entry |
+|---|---|---|---|
+| 0 | hermetic corpus (no net, no cluster) | this container | `bash scripts/test.sh` |
+| 1 | real Ubuntu VM + real k3s + live apply/rollback | userspace QEMU on this host | `scripts/test-onvm.sh --with-vm` |
+| 2 | the actual lab host drill | disposable Ubuntu server | future |
+
+Tier-1 scripts: `scripts/vm-tier/{fetch-qemu,fetch-image,up,down,build-image-tar}.sh`
+(vendor prefix under gitignored `.vm/`; no sudo anywhere).
 
 ## Process artifacts
 
