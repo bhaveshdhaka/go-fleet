@@ -2,6 +2,10 @@
 # secrets/inputs are never committed
 inputs/
 *.env.local
+secrets/
+# repo-local toolchain installs (./install.sh) and build outputs
+.toolchain/
+dist/
 # scratch and state
 .tmp/
 *.log
