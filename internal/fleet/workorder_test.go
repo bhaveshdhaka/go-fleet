@@ -61,11 +61,11 @@ func TestParseFrontMatter(t *testing.T) {
 		t.Fatalf("pieces = %d, want 2", len(w.Pieces))
 	}
 	if w.Pieces[0].ID != "1" || w.Pieces[0].Title != "first piece" ||
-		w.Pieces[0].Verify != "bash scripts/test.sh" || !w.Pieces[0].Integrated {
+		w.Pieces[0].Verify != "bash scripts/test.sh" || w.Pieces[0].Integrated != "true" {
 		t.Fatalf("piece 0 = %+v", w.Pieces[0])
 	}
-	if w.Pieces[1].Integrated {
-		t.Fatal("piece 1 must not be integrated")
+	if w.Pieces[1].Integrated != "false" {
+		t.Fatal("piece 1 must be unintegrated")
 	}
 	if !w.isActive() {
 		t.Fatal("IN_PROGRESS must be active")

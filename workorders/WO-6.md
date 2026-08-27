@@ -19,7 +19,7 @@ pieces:
   - id: 4
     title: gh repo create bhaveshdhaka/go-fleet + push (DEFERRED by owner)
     verify: gh repo view bhaveshdhaka/go-fleet
-    integrated: false
+    integrated: deferred
 ---
 
 # WO-6 — Distribution: license, version stamp, release artifacts, repo

@@ -14,10 +14,14 @@ import (
 // to the prose `> **Status:**` header line.
 
 type WOPiece struct {
-	ID         string
-	Title      string
+	ID    string
+	Title string
+	// Verify is the piece's verify command; Integrated is the piece state:
+	// "true" (landed), "false" (pending), or "deferred" (explicitly waived
+	// by the owner, evidenced by a journal directive line). Only "false"
+	// counts as unintegrated for predicate P5.
 	Verify     string
-	Integrated bool
+	Integrated string
 }
 
 type Workorder struct {
@@ -90,7 +94,12 @@ func (w *Workorder) parseFrontMatter(lines []string) {
 			case "verify":
 				w.Pieces[cur].Verify = val
 			case "integrated":
-				w.Pieces[cur].Integrated = val == "true"
+				switch val {
+				case "true", "false", "deferred":
+					w.Pieces[cur].Integrated = val
+				default:
+					w.Pieces[cur].Integrated = "false"
+				}
 			}
 		case !inPieces && strings.HasPrefix(ln, "  - ") || !inPieces && strings.HasPrefix(ln, "- "):
 			// unsupported list at top level: ignore
@@ -155,7 +164,7 @@ func (w Workorder) isActive() bool {
 func (w Workorder) unintegratedCount() int {
 	n := 0
 	for _, p := range w.Pieces {
-		if !p.Integrated {
+		if p.Integrated == "false" {
 			n++
 		}
 	}
