@@ -13,6 +13,9 @@ Two-file rule of this repo:
                                            # whenever anything looks wrong
     ./scripts/fleet next                   # READ-ONLY guidance: next legal action
     ./scripts/fleet check                  # READ-ONLY predicates P1-P6 report
+    ./scripts/fleet site list              # READ-ONLY managed sites registry
+    ./scripts/fleet ops <status|doctor>    # READ-ONLY site observation (sos-lab
+                                           # parity; explicit access, zero mutations)
     ./scripts/fleet wo list|show|new ...   # workorder surface (schema v1)
     ./scripts/fleet init [dir]             # scaffold the SDLC file skeleton
     ./scripts/fleet onboard <name>         # register component (+pipeline+state)

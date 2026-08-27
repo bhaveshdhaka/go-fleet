@@ -24,6 +24,8 @@ const helpText = `fleet <command>
   wo <list|show|new> [...]               workorder surface (schema v1)
   init [dir]                             scaffold the SDLC file skeleton
   onboard <component>                    register component (registry+pipeline+state)
+  site list                              managed sites registry (read-only)
+  ops <status|doctor>                    site observation, sos-lab parity (read-only)
   approve <component> <dev|prod> [who]   write approval file + journal
   promote <component> <to-stage> [...]   gated stage transition
   verify [units...]                      run the test corpus, journal the result

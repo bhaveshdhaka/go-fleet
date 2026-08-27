@@ -61,8 +61,9 @@ data the binary validates, never prompts hoping an LLM behaves.
 
 ## State
 
-- Done through WO-6: see HANDOVER.md (corpus 27 units / 317 asserts green;
-  LICENSE, VERSION 0.1.0 stamp, release artifacts + SHA256SUMS, installer
-  path). gh repo create DEFERRED by owner ("just do locally sync later") —
-  remote sync when gh auth exists.
-- Next action: execute WO-7 (ops engine, read-only parity).
+- Done through WO-7: see HANDOVER.md (corpus 31 units / 347 asserts green;
+  enforcement v1, distribution incl. private GitHub repo, ops engine with
+  byte-identical read-only parity vs ./lab on live hk-03-dev; ZERO
+  mutations so far).
+- Next action: execute WO-8 (ops mutations, dual-run with ./lab until
+  identical, then cutover).

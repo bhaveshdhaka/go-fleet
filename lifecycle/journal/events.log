@@ -34,3 +34,9 @@ ts=2026-08-27T14:28:43Z event=promoted component=fleetctl from=stage to=prod act
 # verify wo=WO-6 piece=3 cmd="C11b_installer_static + full corpus" result=PASS units=27 pass=317 fail=0 skip=0 (install.sh builds prefix/bin/fleet, FLEET_INSTALL_OK contract intact)
 # blocked wo=WO-6 piece=4 cmd="gh repo create bhaveshdhaka/go-fleet" result=BLOCKED gh binary absent in container and no GH_TOKEN/GITHUB_TOKEN in environment; goal mandates stop-and-report on unauthenticated gh; owner must provide gh auth (or run gh repo create themselves); all other WO-6 pieces landed green
 # owner-directive wo=WO-6 piece=4 "just do locally sync later": gh repo create deferred by owner authority; remote sync happens later when gh auth exists; local pieces stand as delivered. WO-6 marked EXECUTED with piece 4 deferred.
+# verify wo=WO-7 piece=1 cmd="go vet + go test + site list + C12a + full corpus" result=PASS units=28 (C12a added)
+# verify wo=WO-7 piece=3 cmd="diff <(./lab status) <(fleet ops status)" result=PASS back_to_back=identical (single-line diff on first pass was kubectl AGE rounding between runs; cluster section is a discarded probe; pods print() trailing newline replicated; ZERO mutations)
+# verify wo=WO-7 piece=4 cmd="C12b+C12c+C12d + live parity (doctor text=identical, json=identical after cname detail fix) + full corpus" result=PASS units=31 pass=347 fail=0 skip=0
+# verify wo=WO-6 piece=4 cmd="gh repo create bhaveshdhaka/go-fleet" result=PASS repo=https://github.com/bhaveshdhaka/go-fleet visibility=private gh=2.98.0 checksummed-install auth=via-openchamber-token (owner unblocked: "gh configured through openchamber")
+# milestone wo=WO-7 result=EXECUTED corpus=31u/347a parity="ops status + ops doctor byte-identical with ./lab on live hk-03-dev" mutations=zero
+# milestone wo=WO-6 result=EXECUTED gh_repo=https://github.com/bhaveshdhaka/go-fleet visibility=private (owner unblocked gh via openchamber)

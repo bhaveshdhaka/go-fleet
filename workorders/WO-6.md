@@ -17,18 +17,20 @@ pieces:
     verify: bash scripts/test.sh (C11b green + full corpus)
     integrated: true
   - id: 4
-    title: gh repo create bhaveshdhaka/go-fleet + push (DEFERRED by owner)
+    title: gh repo create bhaveshdhaka/go-fleet + push (completed after owner unblock)
     verify: gh repo view bhaveshdhaka/go-fleet
-    integrated: deferred
+    integrated: true
 ---
 
 # WO-6 — Distribution: license, version stamp, release artifacts, repo
 
 > **Status:** EXECUTED this session · Owner directive: execute PLAN.md
-> WO-6 (goal message 2026-08-27). Piece 4 (gh repo create) DEFERRED by
-> owner directive "just do locally sync later" (2026-08-27): no gh binary
-> and no token exist in the container; the remote sync happens when the
-> owner provides gh auth. Everything local landed green.
+> WO-6 (goal message 2026-08-27). Piece 4 (gh repo create) was deferred by
+> owner ("just do locally sync later"), then completed the same day after
+> the owner provided gh auth through openchamber: repo
+> https://github.com/bhaveshdhaka/go-fleet created PRIVATE (visibility
+> flip is one command at owner acceptance), gh v2.98.0 checksummed local
+> install, token used transiently via GH_TOKEN.
 
 ## Plan section (decisions, dated 2026-08-27)
 

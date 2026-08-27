@@ -1,52 +1,54 @@
 # HANDOVER — go-fleet program
 
 > Read order for any agent arriving cold: `README.md` → `AGENTS.md` (the
-> law) → `PLAN.md` (the program) → this file (live state). Then `git log
-> --oneline -12` for recent verified history. Facts below are measured,
-> not inferred.
+> law) → `PLAN.md` (the program) → this file → `WORKING-NOTES.md` (working
+> instructions, ephemeral — deleted at WO-10). Then `git log --oneline -8`.
+> Facts below are measured, not inferred.
 
 ## State at a glance
 
 | Item | State |
 |---|---|
-| Repo | `/home/openchamber/workspaces/fleet`, git clean, master |
-| Corpus | 27 units / 317 assertions, fail=0 skip=0 (`bash scripts/test.sh`) |
-| Program | `PLAN.md` ACTIVE — **BLOCKED at WO-6 piece 4**: gh repo create needs owner gh auth (no gh binary, no token in container; journaled). WO-7+ queued behind it |
-| Distribution | **WO-6 local pieces live**: LICENSE (MIT), VERSION 0.1.0 stamped into the CLI, `ci/build-release.sh` static artifacts (linux/amd64, darwin/amd64, darwin/arm64) + SHA256SUMS (C11a), install.sh installs `prefix/bin/fleet` (C11b) |
-| Enforcement | **WO-5 live**: workorder front-matter schema v1 (WO-1..5 retrofitted), predicates P1-P6 via `./scripts/fleet check`, full `next` guidance engine, approval-actor policy in `.fleet.yaml` (prod needs owner|owner-via-agent) |
-| CLI | **Go core live**: `cmd/fleet` (module `github.com/bhaveshdhaka/go-fleet`) behind thin shims `scripts/fleet` + `ci/promote.sh`; binary `dist/fleet` (gitignored), built by `ci/build-fleet.sh` (pinned go1.27.0, GOPROXY=off, trimpath, byte-reproducible) |
-| New WO-4 commands | `init onboard next wo verify` (minimal — WO-5 adds front-matter schema, predicates P1-P6, full guidance engine) |
-| Toolchain | pinned via `toolchain.env`; Go 1.27.0 at `~/.toolchain` (PATH) |
-| Drilled VM | RUNNING: QEMU pid `.vm/run/qemu.pid` (23088 at handover), `fleet-vm Ready v1.36.3+k3s1`, host API `127.0.0.1:16443` (kubeconfig `.vm/run/kubeconfig`) |
-| sos-lab | UNTOUCHED, authoritative for hk-03-dev until WO-8 parity; located `../sos-lab` |
-| Real cluster | hk-03-dev; mutations via `./lab` ONLY until cutover; explicit KUBECONFIG always (AGENTS.md rule 7); the Go core never reads KUBECONFIG (asserted by C9d) |
-| Fleet registry | `ops/PROJECTS.yaml` — fleetctl(prod) + fleethub(built) |
+| Repo | `/home/openchamber/workspaces/fleet`, git clean, master; remote `origin` = github.com/bhaveshdhaka/go-fleet (**private**) |
+| Corpus | 31 units / 347 assertions, fail=0 skip=0 (`bash scripts/test.sh`) |
+| Program | `PLAN.md` ACTIVE — next open piece: **WO-8** (ops mutations, dual-run with ./lab) |
+| CLI | Go core `cmd/fleet` (module github.com/bhaveshdhaka/go-fleet, `fleet 0.1.0`) behind thin shims `scripts/fleet` + `ci/promote.sh`; binary `dist/fleet` via `ci/build-fleet.sh` |
+| Enforcement | front-matter schema v1 (incl. `integrated: deferred` for owner-waived pieces), predicates P1-P6 (`fleet check` — 6/6 PASS), full `next` engine, `.fleet.yaml` actor policy (prod human-gated) |
+| Distribution | MIT LICENSE; `ci/build-release.sh` static linux/darwin + SHA256SUMS (C11a); install.sh installs `prefix/bin/fleet` (C11b); GH repo private |
+| Ops engine | `ops/SITES.yaml` (hk-03-dev, engine sos-lab, access in-cluster — EXPLICIT, never ambient); `fleet ops status/doctor` **byte-identical with ./lab on live hk-03-dev** (status+doctor text, doctor --json); ZERO mutations performed |
+| Toolchain | go 1.27.0 pinned (toolchain.env); gh 2.98.0 at `~/.local/bin/gh` (NOT on default PATH), auth via openchamber token (`GH_TOKEN` pattern — see WORKING-NOTES) |
+| Drilled VM | RUNNING: QEMU pid `.vm/run/qemu.pid` (23088), `fleet-vm Ready v1.36.3+k3s1`, host API 127.0.0.1:16443 |
+| sos-lab | UNTOUCHED except its read-only verbs; authoritative for hk-03-dev until WO-8 dual-run parity passes |
+| Real cluster | hk-03-dev = the host this container runs ON (in-cluster SA `sos-lab/openchamber`). fleet NEVER uses ambient creds — site-declared access only (C12d) |
 
 ## Rules that got agents burned this cycle (now enforced/asserted)
 
-- Ambient kubeconfig fallback hit the REAL cluster once — never trust env
-  creds (rule 7). NEW (WO-4): same hazard exists for repo resolution — a
-  drill with empty FLEET_ROOT from the repo cwd let `onboard` append to the
-  LIVE registry (repaired, journaled). Shims now pin FLEET_ROOT; drills
-  must run from a neutral cwd with FLEET_ROOT pointing at the scratch copy.
-- TCG guests need `virtio-rng-pci` or sshd hangs cloud-init (asserted in C7a).
-- Test scratch copies must scrub inherited live state to pristine baseline (C5c/C6c).
-- Onboard is not atomic: pipeline file renders FIRST, then registry/state
-  appends — template errors must surface before any contract mutation.
+- Ambient resolution in ANY form: kubectl creds (rule 7) AND repo-root
+  walk-up (WO-4 live-registry incident). Fixes: site-declared access +
+  constructed child env (C12d), shims pin FLEET_ROOT, drills from neutral
+  cwd with FLEET_ROOT pinned.
+- Journal honesty: never append a verify line before reading the summary;
+  corrections are `# journal-correction` lines (append-only, in the open).
+- Test scenarios neutralize ALL copied workorders generically, else every
+  new WO file breaks the corpus.
+- kubectl with no HOME litters `.kube/` into the CWD — runner passes temp
+  HOME (fixed; keep it fixed).
 
 ## Next action
 
-Owner unblocks WO-6 piece 4 (provide gh auth or run `gh repo create
-bhaveshdhaka/go-fleet` + push), then execute **WO-7** (ops engine,
-READ-ONLY parity vs ../sos-lab ./lab on hk-03-dev — zero mutations).
-Workorder process: plan section → decomposed pieces → journaled verify →
-integrate. The corpus is the gate — do not integrate on red.
+Open `PLAN.md`, execute **WO-8** (ops mutations): deploy/build/dns/monitor
+via fleet, DUAL-RUN with ./lab on hk-03-dev until identical, cutover only
+when both paths agree. Then WO-9 (migration), WO-10 (arjun.hk end-to-end →
+STOP for owner acceptance). Workorder process per house law; corpus is the
+gate. WORKING-NOTES.md has the WO-8 quick-start.
 
 ## Standing cautions
 
-- `.vm/` holds ~600 MB vendored QEMU + image; gitignored; safe to delete,
-  rebuilt by `scripts/vm-tier/fetch-*.sh` (pinned, sha256-verified).
-- `./fleet down` equivalent: `scripts/vm-tier/down.sh` (graceful ACPI).
-- Secrets never enter any repo file (sos-lab house rule, inherited).
-- Journal `#` comment lines are the verify/incident record channel (WO-5
-  P4 will formalize verify events; doctor/C5c/C6c skip comments).
+- Secrets: sos-lab `secrets/` are read by fleet only for key-name checks
+  and the CF token (transient, never printed). The openchamber gh token
+  once flashed into the chat transcript (key-filter slip) — chat-only,
+  present in no file; rotate if that matters to you.
+- `.vm/` is ~600 MB gitignored; `scripts/vm-tier/down.sh` for graceful
+  ACPI shutdown.
+- Journal `#` comment lines are the verify/incident channel (doctor and
+  C5c/C6c skip them); WO-5's P4 predicate reads `# verify wo=<id>` lines.

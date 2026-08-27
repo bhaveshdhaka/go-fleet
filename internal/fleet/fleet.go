@@ -102,6 +102,10 @@ func Run(cmd string, args []string) int {
 		return cmdVerify(args)
 	case "check":
 		return cmdCheck(args)
+	case "site":
+		return cmdSite(args)
+	case "ops":
+		return cmdOps(args)
 	default:
 		fmt.Fprintf(os.Stderr, "FLEET ERROR :: unknown command '%s' (see --help)\n", cmd)
 		return 1
