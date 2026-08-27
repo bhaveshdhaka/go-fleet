@@ -18,8 +18,11 @@ sed -i -E 's/^(    stage: ).*/\1built/; s/^(    last_promoted_at: ).*/\1""/' \
 rm -f "$repo"/lifecycle/approvals/dev/*.approved "$repo"/lifecycle/approvals/prod/*.approved
 sed -i '/^# verify/d; /^ts=/d' "$repo/lifecycle/journal/events.log"
 printf 'ts=2026-08-27T00:00:00Z event=approved component=fleetctl stage=dev actor=c10\n' >> "$repo/lifecycle/journal/events.log"
+# scenario control: neutralize ALL copied workorders, then drive WO-5
+for w in "$repo"/workorders/WO-*.md; do
+  sed -i 's/^status: OPEN$/status: EXECUTED/; s/^status: IN_PROGRESS$/status: EXECUTED/; s/^    integrated: false$/    integrated: true/' "$w"
+done
 printf '# verify ts=2026-08-27T00:00:01Z wo=WO-5 piece=1 result=PASS units=1 pass=1 fail=0 skip=0\n' >> "$repo/lifecycle/journal/events.log"
-sed -i 's/^status: IN_PROGRESS$/status: EXECUTED/; s/^    integrated: false$/    integrated: true/' "$repo/workorders/WO-5.md"
 gitc() { git -C "$repo" -c user.email=c10@fleet -c user.name=c10 "$@"; }
 gitc init -q && gitc add -A && gitc commit -qm baseline
 

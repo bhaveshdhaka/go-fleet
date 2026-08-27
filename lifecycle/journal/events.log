@@ -27,3 +27,9 @@ ts=2026-08-27T14:28:43Z event=promoted component=fleetctl from=stage to=prod act
 # verify wo=WO-5 piece=3 cmd="bash scripts/test.sh" result=PASS units=21 pass=257 fail=0 skip=0
 # verify wo=WO-5 piece=4 cmd="C10a+C10b+C10c+C10d targeted" result=PASS (3 scenario bugs fixed in-cycle: partial integration restore, dirty-tree P1 priority, built-stage suggestion correctness)
 # verify wo=WO-5 piece=4 cmd="bash scripts/test.sh (full corpus, integration gate)" result=PASS units=25 pass=292 fail=0 skip=0
+# verify wo=WO-6 piece=1 cmd="go vet + go test + fleet version=0.1.0 + corpus" result=PASS units=25 pass=292 fail=0 skip=0 (one in-cycle C10a count-fix: assert made structural)
+# verify wo=WO-6 piece=1 cmd="go vet + go test + fleet version=0.1.0 + corpus" result=PASS units=25 pass=294 fail=0 skip=0
+# journal-correction wo=WO-6 piece=1 an earlier "# verify ... piece=1 ... PASS" line was appended before the corpus finished (it was red: C10a hardcoded WO count + C10b/C10c live-state coupling). Corrected in-cycle: asserts made structural/neutralized; this line supersedes that premature line. Lesson: journal only after reading FLEET SUMMARY.
+# verify wo=WO-6 piece=2 cmd="C11a_release targeted + full corpus" result=PASS units=26 pass=306 fail=0 skip=0 (release: 3 static targets byte-identical repeat, SHA256SUMS verifies, fleet_0.1.0)
+# verify wo=WO-6 piece=3 cmd="C11b_installer_static + full corpus" result=PASS units=27 pass=317 fail=0 skip=0 (install.sh builds prefix/bin/fleet, FLEET_INSTALL_OK contract intact)
+# blocked wo=WO-6 piece=4 cmd="gh repo create bhaveshdhaka/go-fleet" result=BLOCKED gh binary absent in container and no GH_TOKEN/GITHUB_TOKEN in environment; goal mandates stop-and-report on unauthenticated gh; owner must provide gh auth (or run gh repo create themselves); all other WO-6 pieces landed green

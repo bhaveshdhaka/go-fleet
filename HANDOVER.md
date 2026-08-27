@@ -10,8 +10,9 @@
 | Item | State |
 |---|---|
 | Repo | `/home/openchamber/workspaces/fleet`, git clean, master |
-| Corpus | 25 units / 292 assertions, fail=0 skip=0 (`bash scripts/test.sh`) |
-| Program | `PLAN.md` ACTIVE — next open piece: **WO-6** (distribution) |
+| Corpus | 27 units / 317 assertions, fail=0 skip=0 (`bash scripts/test.sh`) |
+| Program | `PLAN.md` ACTIVE — **BLOCKED at WO-6 piece 4**: gh repo create needs owner gh auth (no gh binary, no token in container; journaled). WO-7+ queued behind it |
+| Distribution | **WO-6 local pieces live**: LICENSE (MIT), VERSION 0.1.0 stamped into the CLI, `ci/build-release.sh` static artifacts (linux/amd64, darwin/amd64, darwin/arm64) + SHA256SUMS (C11a), install.sh installs `prefix/bin/fleet` (C11b) |
 | Enforcement | **WO-5 live**: workorder front-matter schema v1 (WO-1..5 retrofitted), predicates P1-P6 via `./scripts/fleet check`, full `next` guidance engine, approval-actor policy in `.fleet.yaml` (prod needs owner|owner-via-agent) |
 | CLI | **Go core live**: `cmd/fleet` (module `github.com/bhaveshdhaka/go-fleet`) behind thin shims `scripts/fleet` + `ci/promote.sh`; binary `dist/fleet` (gitignored), built by `ci/build-fleet.sh` (pinned go1.27.0, GOPROXY=off, trimpath, byte-reproducible) |
 | New WO-4 commands | `init onboard next wo verify` (minimal — WO-5 adds front-matter schema, predicates P1-P6, full guidance engine) |
@@ -35,10 +36,9 @@
 
 ## Next action
 
-Open `PLAN.md`, execute **WO-6** (distribution): MIT LICENSE; version
-stamp; static release build (linux/darwin) + SHA256SUMS; gh repo create
-bhaveshdhaka/go-fleet (stop if gh unauthenticated); installer path in
-install.sh. Verify: fleet version + checksum verify unit + corpus.
+Owner unblocks WO-6 piece 4 (provide gh auth or run `gh repo create
+bhaveshdhaka/go-fleet` + push), then execute **WO-7** (ops engine,
+READ-ONLY parity vs ../sos-lab ./lab on hk-03-dev — zero mutations).
 Workorder process: plan section → decomposed pieces → journaled verify →
 integrate. The corpus is the gate — do not integrate on red.
 

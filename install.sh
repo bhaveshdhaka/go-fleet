@@ -69,6 +69,16 @@ if [[ "$got" != "$TOOLCHAIN_GO_VERSION" ]]; then
 fi
 say "[install] verified go $got at $prefix/bin/go"
 
+# WO-6: install the fleet control-plane CLI itself into the prefix. The
+# binary is built hermetically (ci/build-fleet.sh: pinned toolchain,
+# GOPROXY=off, trimpath, byte-reproducible) and stamped with repo VERSION.
+if ! out="$(bash "$ROOT/ci/build-fleet.sh" "$prefix/bin/fleet" 2>&1)"; then
+  $json && echo "FLEET_INSTALL_FAIL reason=fleet_cli_build"
+  say "FLEET INSTALL FAIL — fleet CLI build failed"; printf '%s\n' "$out"; exit 1
+fi
+printf '%s\n' "$out" | sed 's/^/[install] /'
+say "[install] fleet CLI at $prefix/bin/fleet ($("$prefix/bin/fleet" version))"
+
 # Partial installs are acceptable when only non-core tools failed (e.g.
 # restic without bzip2 in slim containers). Core = whatever the corpus needs:
 # go + kubectl presence decide honesty here; report machine-parseable status.

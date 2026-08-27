@@ -27,13 +27,17 @@ out="${1:-$FLEET_ROOT/dist/fleet}"
 go_bin="$(find_go)" || exit 1
 mkdir -p "$(dirname "$out")"
 
+# version stamp: repo-root VERSION (WO-6); fall back to the toolchain pin
+ver="$(cat "$FLEET_ROOT/VERSION" 2>/dev/null | tr -d '[:space:]')"
+[[ -n "$ver" ]] || ver="$TOOLCHAIN_GO_VERSION"
+
 (
   cd "$FLEET_ROOT" || exit 1
-  export GOPROXY=off GOFLAGS=-mod=readonly GOTOOLCHAIN=local
+  export GOPROXY=off GOFLAGS=-mod=readonly GOTOOLCHAIN=local CGO_ENABLED=0
   exec "$go_bin" build \
     -trimpath -buildvcs=false \
-    -ldflags "-X main.version=${TOOLCHAIN_GO_VERSION}" \
+    -ldflags "-X main.version=${ver}" \
     -o "$out" ./cmd/fleet
 ) || exit 1
 
-echo "BUILT ${out#$FLEET_ROOT/} go=${TOOLCHAIN_GO_VERSION}"
+echo "BUILT ${out#$FLEET_ROOT/} go=${TOOLCHAIN_GO_VERSION} version=${ver}"

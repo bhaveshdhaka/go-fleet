@@ -26,7 +26,8 @@ o="$(FLEET_ROOT="$repo" "$F" wo list 2>&1)"
 assert_contains "new WO listed schema v1 OPEN" "WO id=WO-902 status=OPEN schema=v1" "$o"
 n_v1="$(printf '%s\n' "$o" | grep -c 'schema=v1')"
 n_legacy="$(printf '%s\n' "$o" | grep -c 'schema=legacy')"
-assert_eq "all live workorders carry schema v1" 6 "$n_v1"
+n_total="$(ls "$repo"/workorders/WO-*.md | wc -l | tr -d ' ')"
+assert_eq "every workorder carries schema v1" "$n_total" "$n_v1"
 assert_eq "no legacy workorders remain" 0 "$n_legacy"
 
 # legacy fallback: a file without front-matter is reported, not crashed

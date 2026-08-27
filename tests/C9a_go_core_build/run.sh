@@ -42,7 +42,8 @@ h2="$(sha256sum "$scratch/fleet2" | cut -d' ' -f1)"
 assert_eq "repeat builds byte-identical" "$h1" "$h2"
 
 ver="$("$scratch/fleet1" version)"
-assert_eq "binary stamps pinned version" "fleet $TOOLCHAIN_GO_VERSION" "$ver"
+want_ver="$(tr -d '[:space:]' < "$FLEET_ROOT/VERSION")"
+assert_eq "binary stamps repo VERSION" "fleet $want_ver" "$ver"
 
 # templates ship inside the binary: init must work from ANY cwd
 proj="$scratch/proj"
