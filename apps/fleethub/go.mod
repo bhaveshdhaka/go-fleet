@@ -1,0 +1,3 @@
+module fleet/fleethub
+
+go 1.27.0
