@@ -14,6 +14,10 @@ dist_dir="$scratch/dist"
 mkdir -p "$repo" "$dist_dir"
 trap 'rm -rf "$scratch"; [[ -n ${srv_pid:-} ]] && kill "$srv_pid" 2>/dev/null' EXIT
 tar -C "$FLEET_ROOT" --exclude=.git -cf - . | tar -C "$repo" -xf -
+# isolation: the copy inherits REAL approvals/journal from live promotions —
+# scrub them so this unit always starts from the pristine-baseline contract.
+rm -f "$repo"/lifecycle/approvals/dev/*.approved "$repo"/lifecycle/approvals/prod/*.approved
+sed -i '/^ts=/d' "$repo/lifecycle/journal/events.log"
 
 if ! command -v go >/dev/null 2>&1; then
   report_skip "go available" "toolchain missing"

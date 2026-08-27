@@ -11,6 +11,13 @@ trap 'rm -rf "$scratch"' EXIT
 repo="$scratch/fleet"
 mkdir -p "$repo"
 tar -C "$FLEET_ROOT" --exclude=.git -cf - . | tar -C "$repo" -xf -
+# isolation: copies inherit live registry state (fleetctl may sit at prod
+# after a real ceremony). Reset this copy to the pristine baseline the
+# contract expects: every component at 'built', no approvals, empty journal.
+sed -i -E 's/^(    stage: ).*/\1built/; s/^(    last_promoted_at: ).*/\1""/' \
+  "$repo/ops/state/deployments.yaml"
+rm -f "$repo"/lifecycle/approvals/dev/*.approved "$repo"/lifecycle/approvals/prod/*.approved
+sed -i '/^ts=/d' "$repo/lifecycle/journal/events.log"
 
 p() { bash "$repo/ci/promote.sh" "$@"; }
 hash_tree() { (cd "$1" && find ops lifecycle ci scripts tests -type f -print0 2>/dev/null | sort -z | xargs -0 -r sha256sum | sha256sum); }

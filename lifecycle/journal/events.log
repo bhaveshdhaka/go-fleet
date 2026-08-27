@@ -1,0 +1,9 @@
+# lifecycle/journal/events.log — APPEND-ONLY audit trail.
+# One JSON-ish line per event. Written ONLY by ./fleet approve / promote /
+# webapp POST /approve. Never rewrite history lines.
+# Format: ts=<RFC3339> event=<approved|promoted|rejected> component=<name> [from=X to=Y] actor=<id>
+ts=2026-08-27T14:27:33Z event=approved component=fleetctl stage=dev actor=owner-via-agent
+ts=2026-08-27T14:27:33Z event=approved component=fleetctl stage=prod actor=owner-via-agent
+ts=2026-08-27T14:27:45Z event=promoted component=fleetctl from=built to=dev actor=owner-via-agent
+ts=2026-08-27T14:27:46Z event=promoted component=fleetctl from=dev to=stage actor=owner-via-agent
+ts=2026-08-27T14:28:43Z event=promoted component=fleetctl from=stage to=prod actor=owner-via-agent

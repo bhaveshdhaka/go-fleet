@@ -10,3 +10,5 @@ dist/
 .tmp/
 *.log
 .vm/
+# but the append-only SDLC audit journal IS source of truth:
+!lifecycle/journal/events.log
