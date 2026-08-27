@@ -51,7 +51,11 @@ tool_source() {
 # pin <tool> -> exact version string from toolchain.env
 pin() {
   local tool=$1 name
-  name="$(printf '%s' "$tool" | tr '[:lower:]' '[:upper:]' | tr '-' '_')"
+  case "$tool" in
+    # toolchain.env keys its tailwind pin as TAILWIND, not TAILWINDCSS.
+    tailwindcss) name="TAILWIND" ;;
+    *)  name="$(printf '%s' "$tool" | tr '[:lower:]' '[:upper:]' | tr '-' '_')" ;;
+  esac
   local val
   val="$(eval "printf '%s' \"\${TOOLCHAIN_${name}_VERSION:-}\"")"
   if [[ -z "$val" ]]; then
@@ -65,21 +69,23 @@ pin() {
 bin_present() {
   local prefix=$1 tool=$2 want=$3 bin="$2"
   [[ -x "$prefix/bin/$bin" ]] || return 1
-  # Verify version matches pin (best-effort per tool).
+  # Verify version matches pin (best-effort per tool). Compare v-stripped
+  # values on BOTH sides: some pins carry a leading v, others do not.
   local got
   case "$tool" in
     go)     got="$("$prefix/bin/go" version | awk '{print $3}' | sed 's/^go//')" ;;
-    kubectl) got="$("$prefix/bin/kubectl" version --client 2>/dev/null | awk -F'"' '/GitVersion/{print $2}')" ;;
-    restic) got="$(v_strip "$("$prefix/bin/restic" version | awk '{print $2}')")" ;;
-    argocd) got="$(v_strip "$("$prefix/bin/argocd" version --client 2>/dev/null | awk 'NR==1{print $2}')")" ;;
-    kubeseal) got="$(v_strip "$("$prefix/bin/kubeseal" --version 2>/dev/null | awk '{print $NF}')")" ;;
+    kubectl) got="$("$prefix/bin/kubectl" version --client --output json 2>/dev/null \
+              | sed -n 's/.*"gitVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)" ;;
+    restic) got="$("$prefix/bin/restic" version | awk '{print $2}')" ;;
+    argocd) got="$("$prefix/bin/argocd" version --client 2>/dev/null | awk 'NR==1{print $2}')" ;;
+    kubeseal) got="$("$prefix/bin/kubeseal" --version 2>/dev/null | awk '{print $NF}')" ;;
     dagger) got="$("$prefix/bin/dagger" version 2>/dev/null | awk '{print $2}')" ;;
-    templ)  got="$("$prefix/bin/templ" version 2>/dev/null | awk 'NR==1{print $2}' | sed 's/^v//')" ;;
+    templ)  got="$("$prefix/bin/templ" version 2>/dev/null | awk 'NR==1{print $2}')" ;;
     tailwindcss) got="$("$prefix/bin/tailwindcss" --help >/dev/null 2>&1 && echo skip)" ;;
     *)      got=skip ;;
   esac
   [[ "$got" == "skip" ]] && return 0
-  [[ "$got" == "$want" || "$got" == "v$want" ]] && return 0
+  [[ "$(v_strip "$got")" == "$(v_strip "$want")" ]] && return 0
   return 1
 }
 
@@ -94,9 +100,18 @@ install_toolchain() {
     [[ "$a" == "--force" ]] && force=true
   done
 
+  # arch/os consumed by the templ/go download cases; must exist under set -u.
+  local arch="$TOOLCHAIN_ARCH" os="$TOOLCHAIN_OS"
+
   local tools=(go kubectl restic argocd kubeseal dagger templ tailwindcss)
+  local errors=0 failed_tools=""
+  local hints=""
+  command -v bzip2 >/dev/null 2>&1 \
+    || hints="[toolchain] hint: 'bzip2' missing on PATH — restic cannot be installed; everything else will proceed"
+
   if [[ $dry_run == false ]]; then
     mkdir -p "$prefix/bin" "$prefix/src" "$prefix/tmp"
+    [[ -n "$hints" ]] && printf '%s\n' "$hints"
   fi
 
   for tool in "${tools[@]}"; do
@@ -148,11 +163,23 @@ install_toolchain() {
         chmod +x "$prefix/bin/tailwindcss"
         ;;
     esac
+
+    # Explicit per-tool outcome: one bad download never silently poisons the run.
+    if bin_present "$prefix" "$tool" "$v"; then
+      echo "[toolchain] $tool installed ($v)"
+    else
+      echo "[toolchain] ERROR: $tool failed verification after install attempt"
+      errors=$((errors + 1))
+      failed_tools+=" $tool"
+    fi
   done
 
   if [[ $dry_run == false ]]; then
-    echo "[toolchain] all tools installed into $prefix/bin"
+    echo "[toolchain] prefix=$prefix errors=$errors failed_tools:${failed_tools:-none}"
   fi
+  # rc signals *syntax/usage* problems, not individual tool download issues;
+  # callers inspect the deterministic failed_tools: summary above.
+  return 0
 }
 
 # Only run install when invoked directly (not sourced by tests).
