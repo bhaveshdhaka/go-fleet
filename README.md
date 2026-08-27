@@ -107,7 +107,7 @@ Delete the `.toolchain` folder inside this project. Done.
 - No false greens: failing dep SKIP their dependents, never pass vacuously.
 - Gate honesty: `promote` re-executes listed units NOW; stale logs worthless.
 - Idempotency everywhere: repeat approve/promote/install are zero-mutation.
-- Full Tier-0 corpus is network-free and cluster-free (9→13 units this pass).
+- Full Tier-0 corpus is network-free and cluster-free (17 units / 176 assertions).
 
 ### The SDLC loop in one paragraph
 

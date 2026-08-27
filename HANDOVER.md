@@ -1,45 +1,39 @@
-# fleet — engineering handover
+# HANDOVER — go-fleet program
 
-Measured facts as of this session (nothing inferred):
+> Read order for any agent arriving cold: `README.md` → `AGENTS.md` (the
+> law) → `PLAN.md` (the program) → this file (live state). Then `git log
+> --oneline -12` for recent verified history. Facts below are measured,
+> not inferred.
 
-## Committed tree
-master @ 5e43e61 = C0 harness + C1a/b/c + C2a packages.
+## State at a glance
 
-## Working tree (intentionally UNCOMMITTED pending owner sign-off)
-- C3 package: apps/fleetctl, scripts/blocks/03-pipeline.sh, tests/C3a..C3c
-- Block-02 fixes surfaced by tests/C1d_toolchain_idempotent:
-  bin_present v-strip compare bug; pin(tailwindcss) mapping; kubectl probe
-  rewritten for `--output json`; templ os/arch unbound crash; plus per-tool
-  install verification and a deterministic failed_tools summary line.
-- C4 package: infra/k8s manifests x3, scripts/blocks/04-deploy.sh, C4a.
-- C5 package: SDLC spine — ops registry/state/runbooks, lifecycle gates +
-  journal, ci/promote.sh gate engine, scripts/fleet CLI, AGENTS.md,
-  workorders/WO-1.md, tests C5a..C5d.
-- C6 package: apps/fleethub dashboard+approver (stdlib-only), tests C6a..C6c,
-  workorders/WO-2.md.
-- install.sh bootstrap with FLEET_INSTALL_OK/FAIL machine contract
-  (--verify runs full corpus; no sudo; repo-local .toolchain).
-- README.md rewritten: plain-English + geek/agent parts incl. the SDLC story.
+| Item | State |
+|---|---|
+| Repo | `/home/openchamber/workspaces/fleet`, git clean, master |
+| Corpus | 17 units / 176 assertions, fail=0 skip=0 (`bash scripts/test.sh`) |
+| Program | `PLAN.md` ACTIVE — next open piece: **WO-4** (Go core) |
+| Module | `github.com/bhaveshdhaka/go-fleet` (repo created at WO-6) |
+| Toolchain | pinned via `toolchain.env`; Go 1.27.0 at `~/.toolchain` (PATH) |
+| Drilled VM | RUNNING: QEMU pid `.vm/run/qemu.pid`, `fleet-vm Ready v1.36.3+k3s1`, host API `127.0.0.1:16443` (kubeconfig `.vm/run/kubeconfig`) |
+| sos-lab | UNTOUCHED, authoritative for hk-03-dev until WO-8 parity; located `../sos-lab` |
+| Real cluster | hk-03-dev; mutations via `./lab` ONLY until cutover; explicit KUBECONFIG always (AGENTS.md rule 7) |
+| Fleet registry | `ops/PROJECTS.yaml` — fleetctl(prod) + fleethub(built) |
 
-## Verified this session
-- Full corpus before C5/C6: units_run=9 pass=98 fail=0 skip=0.
-- ./fleet doctor: ALL CLEAR after C6 landed (fleethub dir + C6c unit exist).
-- promote.sh contract smokes: dry-run byte-stable; illegal/backwards refused;
-  approval-missing refuses naming exact path; repeat = ALREADY AT, zero writes;
-  gate units are re-executed at promotion time inside isolated repo copies.
-- fleethub E2E: unknown component 400; valid dev approval 201 with correct
-  file content; duplicate idempotent (200 already, journal unchanged);
-  journal line format identical to CLI.
-- install.sh agent smoke in minimal container: FLEET_INSTALL_OK,
-  restic honestly skipped without bzip2, machine lines as contracted.
+## Rules that got agents burned this cycle (now enforced/asserted)
 
-## Tier-1 drilled THIS session (see workorders/WO-3.md)
-- Real Ubuntu 24.04 in userspace QEMU (no sudo/kvm), real k3s v1.36.3+k3s1,
-  fleetctl promoted built→prod with gates, live-applied, pod printed
-  `fleetctl 1.27.0`, bad-rollout undo drill passed. C7a + vm-tier committed.
+- Ambient kubeconfig fallback hit the REAL cluster once — never trust env creds (rule 7).
+- TCG guests need `virtio-rng-pci` or sshd hangs cloud-init (asserted in C7a).
+- Test scratch copies must scrub inherited live state to pristine baseline (C5c/C6c).
 
-## Open for next session (agents read me FIRST)
-1. Commit split awaiting owner: C7 VM tier + WO-3 + registry/state updates.
-2. `down.sh` grace path + VM snapshot/restore for faster repeat drills.
-3. Possible future: registry-driven manifest templating once more than one
-   real service ships through prod.
+## Next action
+
+Open `PLAN.md`, execute **WO-4** (Go core, cmd/fleet) via a workorder:
+plan section → decomposed pieces → journaled verify → integrate. The
+corpus is the gate — do not integrate on red.
+
+## Standing cautions
+
+- `.vm/` holds ~600 MB vendored QEMU + image; gitignored; safe to delete,
+  rebuilt by `scripts/vm-tier/fetch-*.sh` (pinned, sha256-verified).
+- `./fleet down` equivalent: `scripts/vm-tier/down.sh` (graceful ACPI).
+- Secrets never enter any repo file (sos-lab house rule, inherited).
