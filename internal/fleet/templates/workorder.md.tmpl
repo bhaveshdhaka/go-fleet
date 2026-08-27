@@ -1,3 +1,15 @@
+---
+wo: {{.ID}}
+title: {{.Title}}
+status: OPEN
+plan: PLAN.md
+pieces:
+  - id: 1
+    title: <first piece>
+    verify: <verify command>
+    integrated: false
+---
+
 # {{.ID}} — {{.Title}}
 
 > **Status:** OPEN · Owner directive: <fill in — who asked for what, verbatim>
@@ -10,3 +22,7 @@
 
 1. <piece> — verify: <command>
 2. <piece> — verify: <command>
+
+Front-matter is the machine-readable contract (schema v1, validated by
+`./scripts/fleet check`); keep `status` and `integrated` true to reality —
+the predicates report drift with exact fix commands.

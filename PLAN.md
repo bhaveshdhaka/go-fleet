@@ -61,6 +61,7 @@ data the binary validates, never prompts hoping an LLM behaves.
 
 ## State
 
-- Done through WO-4: see HANDOVER.md (corpus 21 units / 257 asserts green;
-  Go core cmd/fleet live behind thin shims; WO-5 predicates still open).
-- Next action: execute WO-5 (enforcement v1, first open piece).
+- Done through WO-5: see HANDOVER.md (corpus 25 units / 292 asserts green;
+  enforcement v1 live: front-matter schema, P1-P6, full next engine,
+  actor policy).
+- Next action: execute WO-6 (distribution, first open piece).

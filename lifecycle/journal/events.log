@@ -18,3 +18,12 @@ ts=2026-08-27T14:28:43Z event=promoted component=fleetctl from=stage to=prod act
 # verify wo=WO-4 piece=4 cmd="bash scripts/test.sh" result=PASS units=17 pass=176 fail=0 skip=0
 # verify wo=WO-4 piece=5 cmd="C9a+C9b+C9c+C9d targeted" result=PASS pass=71 fail=0
 # verify wo=WO-4 piece=5 cmd="bash scripts/test.sh (full corpus, integration gate)" result=PASS units=21 pass=257 fail=0 skip=0
+# verify wo=WO-5 piece=1 cmd="go vet + go test ./internal/fleet + wo list schema=v1 x5" result=PASS
+# verify wo=WO-5 piece=1 cmd="bash scripts/test.sh" result=PASS units=21 pass=257 fail=0 skip=0
+# verify wo=WO-5 piece=2 cmd="go vet + go test ./internal/fleet + ./scripts/fleet check" result=PASS predicates=6/6
+# verify wo=WO-5 piece=2 cmd="bash scripts/test.sh" result=FAIL_UNITS=0_DETAIL=C9d caught undocumented check command; AGENTS.md updated in-cycle
+# verify wo=WO-5 piece=2 cmd="bash scripts/test.sh (rerun after doc sync)" result=PASS units=21 pass=257 fail=0 skip=0
+# verify wo=WO-5 piece=3 cmd="go vet + go test + next-engine fallthrough + actor policy (agent refused on prod, dev allowed)" result=PASS
+# verify wo=WO-5 piece=3 cmd="bash scripts/test.sh" result=PASS units=21 pass=257 fail=0 skip=0
+# verify wo=WO-5 piece=4 cmd="C10a+C10b+C10c+C10d targeted" result=PASS (3 scenario bugs fixed in-cycle: partial integration restore, dirty-tree P1 priority, built-stage suggestion correctness)
+# verify wo=WO-5 piece=4 cmd="bash scripts/test.sh (full corpus, integration gate)" result=PASS units=25 pass=292 fail=0 skip=0

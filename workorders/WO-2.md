@@ -1,3 +1,15 @@
+---
+wo: WO-2
+title: fleethub webapp delivery
+status: EXECUTED
+plan: PLAN.md
+pieces:
+  - id: 1
+    title: apps/fleethub + C6a-C6c build/API/contract units
+    verify: bash scripts/test.sh (C6a-C6c green)
+    integrated: true
+---
+
 # WO-2 — fleethub webapp delivery
 
 > **Status:** EXECUTED this session · Owner directive: read+approve dashboard,

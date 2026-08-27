@@ -1,0 +1,11 @@
+# .fleet.yaml — fleet policy (WO-5 approval-actor policy).
+# approvals.require_human_stages: approvals on these stages are refused for
+# actors outside allowed_actors (human-in-loop on prod; middle hops stay
+# auto-approvable as FLEET_ACTOR=agent). Delete a key to loosen the policy;
+# remove the file to run unrestricted.
+
+policy_version: 1
+
+approvals:
+  allowed_actors: [owner, owner-via-agent]
+  require_human_stages: [prod]

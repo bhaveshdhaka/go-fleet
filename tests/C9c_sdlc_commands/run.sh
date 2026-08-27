@@ -14,8 +14,8 @@ F="$FLEET_ROOT/dist/fleet"
 
 proj="$scratch/proj"
 o="$(FLEET_ROOT= "$F" init "$proj" 2>&1)"
-{ [[ "$o" == "INIT OK dir=$proj files=6"* ]]; } \
-  && report_pass "init scaffolds 6 contract files" || report_fail "init scaffolds 6 contract files" "$o"
+{ [[ "$o" == "INIT OK dir=$proj files=7"* ]]; } \
+  && report_pass "init scaffolds 7 contract files (incl .fleet.yaml)" || report_fail "init scaffolds 7 contract files (incl .fleet.yaml)" "$o"
 
 tree1="$(cd "$proj" && find . -type f | sort | xargs sha256sum | sha256sum)"
 o="$(FLEET_ROOT= "$F" init "$proj" 2>&1)"

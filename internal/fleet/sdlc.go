@@ -38,6 +38,7 @@ func cmdInit(args []string) int {
 		"lifecycle/gates.yaml":         "gates.yaml.tmpl",
 		"lifecycle/STAGES.md":          "stages.md.tmpl",
 		"lifecycle/journal/events.log": "journal.log.tmpl",
+		".fleet.yaml":                  "fleet.yaml.tmpl",
 	}
 	for _, rel := range []string{
 		"ops/PROJECTS.yaml",
@@ -46,6 +47,7 @@ func cmdInit(args []string) int {
 		"lifecycle/gates.yaml",
 		"lifecycle/STAGES.md",
 		"lifecycle/journal/events.log",
+		".fleet.yaml",
 	} {
 		if err := writeSeed(filepath.Join(root, rel), scaffold[rel]); err != nil {
 			return failf("cannot write %s: %v", rel, err)
@@ -158,14 +160,24 @@ func cmdOnboard(args []string) int {
 
 // --- next --------------------------------------------------------------
 
-// cmdNext is the minimal file-state guidance engine: the first pending,
-// legal action in registry order, printed as the exact fix command.
-// WO-5 replaces this with the full predicate-driven engine (P1-P6).
+// cmdNext is the guidance engine (WO-5): predicates P1-P6 in order first —
+// the first FAIL becomes the suggestion with its exact fix command — then
+// the doctor precheck, then the first pending lifecycle hop in registry
+// order.
 func cmdNext(args []string) int {
 	p, rc := mustPaths()
 	if rc != 0 {
 		return rc
 	}
+	for _, r := range RunPredicates(p) {
+		if r.State == "FAIL" {
+			fmt.Printf("NEXT predicate=%s\n", r.Predicate)
+			fmt.Printf("NEXT action=%s\n", r.Fix)
+			fmt.Printf("NEXT reason=%s\n", r.Detail)
+			return 0
+		}
+	}
+
 	regLines, err := readLines(p.Registry)
 	if err != nil {
 		return failf("registry unreadable at %s", p.Registry)
@@ -282,10 +294,15 @@ func cmdWo(args []string) int {
 	wodir := filepath.Join(p.Root, "workorders")
 	switch sub {
 	case "list", "":
-		ids := woIDs(wodir)
-		fmt.Printf("WO LIST count=%d\n", len(ids))
-		for _, id := range ids {
-			fmt.Printf("WO id=%s status=%s file=%s\n", id, woStatus(filepath.Join(wodir, id+".md")), "workorders/"+id+".md")
+		wos := loadWorkorders(wodir)
+		fmt.Printf("WO LIST count=%d\n", len(wos))
+		for _, w := range wos {
+			schema := "legacy"
+			if w.Schema == 1 {
+				schema = "v1"
+			}
+			fmt.Printf("WO id=%s status=%s schema=%s file=workorders/%s.md\n",
+				w.ID, w.Status, schema, w.ID)
 		}
 		return 0
 	case "show":
@@ -324,39 +341,6 @@ func cmdWo(args []string) int {
 	}
 }
 
-func woIDs(dir string) []string {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil
-	}
-	var ids []string
-	for _, e := range entries {
-		n := e.Name()
-		if strings.HasPrefix(n, "WO-") && strings.HasSuffix(n, ".md") {
-			ids = append(ids, strings.TrimSuffix(n, ".md"))
-		}
-	}
-	sort.Strings(ids)
-	return ids
-}
-
-func woStatus(file string) string {
-	b, err := os.ReadFile(file)
-	if err != nil {
-		return "unreadable"
-	}
-	for _, ln := range strings.Split(string(b), "\n") {
-		if m := woStatusRe.FindStringSubmatch(ln); m != nil {
-			s := strings.TrimSpace(m[1])
-			if i := strings.Index(s, "·"); i >= 0 {
-				s = strings.TrimSpace(s[:i])
-			}
-			return s
-		}
-	}
-	return "unknown"
-}
-
 // --- verify --------------------------------------------------------------
 
 var summaryRe = regexp.MustCompile(`^FLEET SUMMARY\s+units_run=(\d+) pass=(\d+) fail=(\d+) skip=(\d+)`)
@@ -384,9 +368,13 @@ func cmdVerify(args []string) int {
 	}
 	// Every verify attempt is journaled, including crashed ones — an
 	// unjournaled verify is exactly the hole WO-5's P4 predicate closes.
+	tag := ""
+	if wo := os.Getenv("FLEET_WO"); wo != "" && validWorkorderID(wo) {
+		tag = " wo=" + wo
+	}
 	if err := AppendJournal(p.Journal, fmt.Sprintf(
-		"# verify ts=%s units=%s pass=%s fail=%s skip=%s result=%s",
-		FleetTS(time.Now()), units, pass, fail, skip, result)); err != nil {
+		"# verify ts=%s%s units=%s pass=%s fail=%s skip=%s result=%s",
+		FleetTS(time.Now()), tag, units, pass, fail, skip, result)); err != nil {
 		return failf("cannot append journal: %v", err)
 	}
 	if err != nil {

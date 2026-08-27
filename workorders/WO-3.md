@@ -1,3 +1,15 @@
+---
+wo: WO-3
+title: Tier-1 VM drill (Ubuntu server emulated on this host)
+status: EXECUTED
+plan: PLAN.md
+pieces:
+  - id: 1
+    title: vm-tier scripts + test-onvm.sh + C7a wiring unit
+    verify: scripts/test-onvm.sh --with-vm (VM_DRILL_OK ALL_TIERS_GREEN)
+    integrated: true
+---
+
 # WO-3 — Tier-1 VM drill: Ubuntu server emulated on this very host
 
 > **Status:** EXECUTED this session · Owner directive: "emulate an ubuntu

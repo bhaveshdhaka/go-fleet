@@ -36,6 +36,12 @@ func cmdApprove(args []string) int {
 	if stg != "dev" && stg != "prod" {
 		return failf("approvals apply to dev or prod only (got '%s')", stg)
 	}
+	pol := loadPolicy(p.Root)
+	if !actorAllowed(pol, who, stg) {
+		return failf("actor '%s' may not approve stage '%s' (policy .fleet.yaml: require_human_stages=%s); fix: FLEET_ACTOR=<%s> ./scripts/fleet approve %s %s",
+			who, stg, strings.Join(pol.RequireHumanStages, ","),
+			strings.Join(pol.AllowedActors, "|"), comp, stg)
+	}
 
 	path := ApprovalPath(p, stg, comp)
 	if HasApproval(path) {

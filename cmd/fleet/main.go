@@ -18,13 +18,14 @@ var version = "dev"
 const helpText = `fleet <command>
   status [component]                     read-only snapshot
   doctor                                 read-only drift check
+  next                                   read-only guidance: next legal action
+  check                                  read-only predicates P1-P6 report
   registry-check                         alias of doctor for CI gates
-  approve <component> <dev|prod> [who]   write approval file + journal
-  promote <component> <to-stage> [...]   gated stage transition
+  wo <list|show|new> [...]               workorder surface (schema v1)
   init [dir]                             scaffold the SDLC file skeleton
   onboard <component>                    register component (registry+pipeline+state)
-  next                                   suggest the next legal action
-  wo <list|show|new> [...]               workorder surface (minimal)
+  approve <component> <dev|prod> [who]   write approval file + journal
+  promote <component> <to-stage> [...]   gated stage transition
   verify [units...]                      run the test corpus, journal the result
 `
 

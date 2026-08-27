@@ -35,7 +35,8 @@ done < <(printf '%s\n' "$impl_help" | sed -n 's/^  \([a-z][a-z-]*\).*$/\1/p' | s
 
 for kw in "STATUS SUMMARY" "DOCTOR OK" "DOCTOR FAIL" "APPROVED component=" \
           "PROMOTED component=" "ALREADY AT" "PROMOTE REFUSED" \
-          "INIT OK" "INIT ALREADY" "ONBOARDED component=" "NEXT action=" "WO LIST" "VERIFY "; do
+          "INIT OK" "INIT ALREADY" "ONBOARDED component=" "NEXT action=" "WO LIST" "VERIFY " \
+          "CHECK SUMMARY"; do
   assert_contains "machine contract '$kw' in Go core" "$kw" "$GO_SRC"
 done
 

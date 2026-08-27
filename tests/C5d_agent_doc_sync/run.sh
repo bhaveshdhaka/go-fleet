@@ -29,7 +29,7 @@ done <<<"$doc_cmds"
 # inverse: every help command must be documented (registry-check is the
 # one alias allowed to stay doc-light)
 undoc=0
-for hcmd in status doctor approve promote init onboard next wo verify registry-check; do
+for hcmd in status doctor approve promote init onboard next check wo verify registry-check; do
   grep -qE "^[[:space:]]+\.?/?[[:space:]]*(\./)?(scripts/fleet )?$hcmd" "$DOC" \
     || case "$hcmd" in
          registry-check) : ;; # alias, allowed to be doc-light

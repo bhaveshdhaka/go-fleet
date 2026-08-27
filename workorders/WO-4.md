@@ -1,3 +1,31 @@
+---
+wo: WO-4
+title: Go core (cmd/fleet replaces the bash control-plane CLI)
+status: EXECUTED
+plan: PLAN.md
+pieces:
+  - id: 1
+    title: module scaffold + hermetic build
+    verify: go vet + ci/build-fleet.sh x2 + bash scripts/test.sh
+    integrated: true
+  - id: 2
+    title: file-contract layer (parsers/writers)
+    verify: go test ./internal/fleet + bash scripts/test.sh
+    integrated: true
+  - id: 3
+    title: status/doctor/approve/promote parity
+    verify: twin-repo scenario drill + bash scripts/test.sh
+    integrated: true
+  - id: 4
+    title: init/onboard/next/wo/verify minimal + templates
+    verify: scratch smoke + bash scripts/test.sh
+    integrated: true
+  - id: 5
+    title: integration (shims, docs, C5d, C9a-C9d, full corpus)
+    verify: bash scripts/test.sh (21u/257a fail=0)
+    integrated: true
+---
+
 # WO-4 — Go core: cmd/fleet replaces the bash control-plane CLI
 
 > **Status:** EXECUTED this session · Owner directive: "execute the first

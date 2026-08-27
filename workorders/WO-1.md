@@ -1,3 +1,15 @@
+---
+wo: WO-1
+title: SDLC spine delivery (registry, gates, fleet CLI)
+status: EXECUTED
+plan: PLAN.md
+pieces:
+  - id: 1
+    title: registry + environments + state + gates + promote engine + fleet CLI
+    verify: bash scripts/test.sh (C5a-C5d green)
+    integrated: true
+---
+
 # WO-1 — SDLC spine delivery (registry, gates, fleet CLI)
 
 > **Status:** EXECUTED this session · Owner directive: "build the file-based

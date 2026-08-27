@@ -10,8 +10,9 @@
 | Item | State |
 |---|---|
 | Repo | `/home/openchamber/workspaces/fleet`, git clean, master |
-| Corpus | 21 units / 257 assertions, fail=0 skip=0 (`bash scripts/test.sh`) |
-| Program | `PLAN.md` ACTIVE — next open piece: **WO-5** (enforcement v1) |
+| Corpus | 25 units / 292 assertions, fail=0 skip=0 (`bash scripts/test.sh`) |
+| Program | `PLAN.md` ACTIVE — next open piece: **WO-6** (distribution) |
+| Enforcement | **WO-5 live**: workorder front-matter schema v1 (WO-1..5 retrofitted), predicates P1-P6 via `./scripts/fleet check`, full `next` guidance engine, approval-actor policy in `.fleet.yaml` (prod needs owner|owner-via-agent) |
 | CLI | **Go core live**: `cmd/fleet` (module `github.com/bhaveshdhaka/go-fleet`) behind thin shims `scripts/fleet` + `ci/promote.sh`; binary `dist/fleet` (gitignored), built by `ci/build-fleet.sh` (pinned go1.27.0, GOPROXY=off, trimpath, byte-reproducible) |
 | New WO-4 commands | `init onboard next wo verify` (minimal — WO-5 adds front-matter schema, predicates P1-P6, full guidance engine) |
 | Toolchain | pinned via `toolchain.env`; Go 1.27.0 at `~/.toolchain` (PATH) |
@@ -34,12 +35,12 @@
 
 ## Next action
 
-Open `PLAN.md`, execute **WO-5** (enforcement v1): workorder front-matter
-schema; predicates P1-P6; `fleet next` guidance engine replaces the WO-4
-minimal one; approval-actor policy in .fleet.yaml. Workorder process:
-plan section → decomposed pieces → journaled verify (`fleet verify` already
-journals `# verify` lines) → integrate. The corpus is the gate — do not
-integrate on red.
+Open `PLAN.md`, execute **WO-6** (distribution): MIT LICENSE; version
+stamp; static release build (linux/darwin) + SHA256SUMS; gh repo create
+bhaveshdhaka/go-fleet (stop if gh unauthenticated); installer path in
+install.sh. Verify: fleet version + checksum verify unit + corpus.
+Workorder process: plan section → decomposed pieces → journaled verify →
+integrate. The corpus is the gate — do not integrate on red.
 
 ## Standing cautions
 

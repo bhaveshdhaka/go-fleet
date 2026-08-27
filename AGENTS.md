@@ -12,7 +12,8 @@ Two-file rule of this repo:
     ./scripts/fleet doctor                 # READ-ONLY drift check; run FIRST
                                            # whenever anything looks wrong
     ./scripts/fleet next                   # READ-ONLY guidance: next legal action
-    ./scripts/fleet wo list|show|new ...   # workorder surface (minimal)
+    ./scripts/fleet check                  # READ-ONLY predicates P1-P6 report
+    ./scripts/fleet wo list|show|new ...   # workorder surface (schema v1)
     ./scripts/fleet init [dir]             # scaffold the SDLC file skeleton
     ./scripts/fleet onboard <name>         # register component (+pipeline+state)
     ./scripts/fleet verify [units...]      # run corpus units, journal the result
@@ -47,6 +48,12 @@ spine.
    not meant for the real lab cluster MUST set KUBECONFIG explicitly
    (e.g. the drill's .vm/run/kubeconfig). An env-level fallback once hit
    hk-03-dev by accident — that failure mode is forbidden.
+8. Approval-actor policy lives in .fleet.yaml (WO-5): approvals on
+   require_human_stages (default prod) are refused for actors outside
+   allowed_actors. Middle hops stay auto-approvable as FLEET_ACTOR=agent.
+   Workorder authoring drift is reported by `./scripts/fleet check` /
+   `next` (predicates P1-P6) with exact fix commands — it does not block;
+   the promote gates remain the only hard blocks.
 
 ## Execution tiers
 
