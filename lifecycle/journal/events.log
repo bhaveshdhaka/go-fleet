@@ -94,3 +94,5 @@ ts=2026-08-28T02:02:08Z event=promoted component=arjun-hk from=stage to=prod act
 # site-new wo= site=drillsite namespace=sos-lab access=in-cluster templates=5 domain=example.test
 # wo=WO-15 correction: a site new smoke ran against the live root by mistake (no --dry-run, wrong FLEET_ROOT); ops/sites/drillsite + its SITES.yaml entry removed; nothing else touched
 # verify ts=2026-08-28T11:56:00Z wo=WO-15 units=40 pass=494 fail=0 skip=0 result=OK
+# site-canary wo= site=hk-03-dev host=canary.bhavesh.hk result=PASS
+# verify ts=2026-08-28T11:59:24Z wo=WO-15 units=40 pass=494 fail=0 skip=0 result=OK
