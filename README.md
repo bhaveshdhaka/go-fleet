@@ -39,130 +39,65 @@ the full self-test run afterwards. Your AI assistant can be told simply:
 
 ### Fresh Ubuntu install — opencode + openchamber + fleet, the no-drama path
 
-This is the exact shape of the reference deployment this product was built
-and operated on (a Ubuntu box, one user, everything inside `$HOME` and one
-workspaces root). The rules at the end are what prevents the classic
-failures: root-owned files that fight git, `sudo npm` that castrates every
-later install, symlink churn in `/usr/local`, and agents tripping over
-ambient credentials. Measured working versions: node 20/22, npm 9,
-opencode-ai 1.18.x, openchamber 1.20.x, gh 2.98.x, go 1.27.
+One person, one server, one identity: **root**. No second user, no chown
+choreography, no permission domains — mixed ownership is what creates
+permission drama, and a single-operator box has none. Everything lives in
+`/root` and one workspaces root. Measured working versions: bun 1.3.x,
+node 22, opencode 1.18.x, openchamber 1.20.x, gh 2.98.x, go 1.27.
 
-**1. One dedicated user, one ownership domain.** The agent user owns its
-whole HOME and the workspace root. Nothing in those trees is ever created
-or touched by root afterwards.
+**The short path (guided, interactive):** install opencode, connect your
+provider key, then paste the prompt in
+[BOOTSTRAP.md](BOOTSTRAP.md) — it asks you for the pieces only you have
+(your domain/subdomain, your Cloudflare API token, a UI password), sets up
+openchamber + cloudflared + the tunnel + DNS + this fleet repo, verifies
+every step, and prints a report of what exists and how to use it.
 
-```bash
-sudo adduser --uid 1000 agent          # pick a uid; 1000 is what we run
-sudo usermod -aG sudo agent            # sudo ONLY for the system packages below
-su - agent
-```
-
-**2. Base packages (the only sudo you should need):**
+**The manual path, if you prefer it:**
 
 ```bash
-sudo apt update && sudo apt install -y curl git ca-certificates \
-  build-essential fuse binutils        # fuse/AppImage only if you use desktop openchamber
-```
+# bun (package manager) + node 22 (runtime openchamber's CLI needs)
+curl -fsSL https://bun.sh/install | bash
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt install -y nodejs
+export PATH="$HOME/.bun/bin:$PATH"
 
-**3. Node 22 under $HOME (never apt's node, never sudo npm).** Ubuntu's
-node is ancient and `sudo npm -g` is the root of all permission pain.
-Use nvm, which lives entirely in `$HOME`:
+# opencode (self-contained binary) + your provider key
+curl -fsSL https://opencode.ai/install | bash
+opencode    # then /auth to connect your provider
 
-```bash
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
-export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh"
-nvm install 22 && nvm alias default 22
-npm config set prefix "$HOME/.npm-global"   # global installs stay in $HOME
-```
-
-Add to `~/.profile` (then re-login or `source` it):
-
-```bash
-export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"
-```
-
-**4. OpenCode CLI** (the coding agent engine; npm package `opencode-ai` —
-this is how the reference box runs it):
-
-```bash
-npm install -g opencode-ai
-opencode --version                     # 1.18.x measured
-```
-
-**5. OpenChamber** (web/PWA control room around opencode; the official
-installer wants Node 22+ and installs the `@openchamber/web` CLI):
-
-```bash
+# openchamber (its installer detects bun automatically)
 curl -fsSL https://raw.githubusercontent.com/openchamber/openchamber/main/scripts/install.sh | bash
-openchamber --version                  # 1.20.x measured
 openchamber --ui-password 'be-creative-here'
-openchamber startup enable             # survive reboots
-openchamber status                     # binds 127.0.0.1:3000 by default
-openchamber connect-url --qr           # pair phone/laptop over the LAN
-openchamber tunnel start --provider cloudflare --mode quick --qr
-                                       # optional: reach it from anywhere
-```
+openchamber startup enable && loginctl enable-linger root
+openchamber status                     # binds 127.0.0.1:3000
 
-OpenChamber keeps all state under `~/.config/openchamber/` (sessions,
-projects, settings, credentials). Own it, back it up. Binds to localhost —
-expose via its tunnel, or `--lan` only on a trusted network.
+# cloudflared + tunnel + DNS for oc.<your-domain> (token from your CF profile)
+curl -fsSL -o /tmp/cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+dpkg -i /tmp/cloudflared.deb
+# create tunnel + ingress + CNAME + service with your API token — see BOOTSTRAP.md
 
-**6. GitHub CLI** (needed only to push/pull private repos as the agent):
-
-```bash
-mkdir -p ~/.local/bin
-curl -fsSL https://github.com/cli/cli/releases/latest/download/gh_2.98.0_linux_amd64.tar.gz \
-  | tar -xz -C /tmp && mv /tmp/gh_2.98.0_linux_amd64/bin/gh ~/.local/bin/
-gh --version
-```
-
-Auth: run `gh auth login` once as the agent user, or (inside openchamber)
-keep the token in openchamber's own credential store — never paste tokens
-into shell history or repo files.
-
-**7. The workspace root + fleet:**
-
-```bash
+# fleet (the SDLC factory)
 mkdir -p ~/workspaces && cd ~/workspaces
 git clone https://github.com/bhaveshdhaka/go-fleet fleet
-cd fleet && ./install.sh               # pinned toolchain -> ./.toolchain, nothing outside
-bash scripts/test.sh                   # hermetic corpus: expect FLEET SUMMARY ... fail=0
+cd fleet && ./install.sh               # pinned toolchain -> ./.toolchain
+bash scripts/test.sh                   # hermetic corpus: expect fail=0
 ./scripts/fleet check                  # predicates P1-P6: expect 6/6 PASS
-./scripts/fleet doctor && ./scripts/fleet next
 ```
 
-Then tell any agent, once: *"read AGENTS.md and follow it."* That file is
-the operating law: mutations only through `./scripts/fleet` and the
-numbered blocks, read-only verbs for everything else, secrets never in
-repo files or journals.
+**How the pieces fit (nothing to sync):** openchamber auto-starts and
+manages its own opencode server (port 4096) and keeps state in
+`~/.config/openchamber/`; opencode keeps providers (`auth.json`) and
+sessions (`opencode.db`) in `~/.local/share/opencode`. The `opencode` TUI
+over SSH and the openchamber PWA on your iPad are both frontends to that
+same server and the same data — configure providers once, see the same
+sessions from either side. Updates are buttons: **Settings → About** in
+the UI (or `openchamber update`, which detects bun); opencode updates are
+offered in the same UI and the server restarts itself.
 
-**8. Optional — a real cluster tier (what hk-03-dev runs):** install k3s,
-then run the SAME shape as the reference deployment: one non-root pod
-(uid 1000) for openchamber with a ServiceAccount + RBAC (never a mounted
-root-owned kubeconfig), PVCs for `~/.config/openchamber`, and exactly one
-hostPath: the workspaces root. fleet talks to clusters ONLY through
-site-declared access (`ops/SITES.yaml`; `access: in-cluster` or
-`access: kubeconfig:<path>`) — it hard-refuses ambient credentials by
-design (AGENTS.md rule 7, enforced by test C12d).
-
-**The rules that prevent the dramas** (each one is a lesson that cost a
-real outage or a real debugging session):
-
-- Never `sudo npm install -g`. Global prefix lives in `$HOME`
-  (`~/.npm-global`), binaries on PATH from there. `/usr/local` stays
-  untouched — no symlinks, no chown chess.
-- Never run agents, git, or npm as root in the workspace. If a root-owned
-  file ever appears, fix ownership ONCE (`sudo chown -R agent:agent`)
-  and find the process that created it — it will keep doing it.
-- One node manager (nvm). Mixing apt-node, nvm, and snap-node is how
-  "works in my shell, fails in the service" bugs are born.
-- One workspaces root (`~/workspaces`), everything cloned beside each
-  other; fleet resolves its own root and never relies on the cwd.
-- Binaries in `~/.local/bin` or `~/.npm-global/bin` — both on PATH — so
-  systemd units, cron, and agents all see the same tools.
-- kubectl (if any) always with an explicit `KUBECONFIG` and a HOME it may
-  write to; a HOME-less kubectl litters `.kube/` into whatever directory
-  it runs in.
+**The only rules with teeth** (each paid for with a real incident): one
+identity owns everything — never run agents as a second user against the
+same tree; global installs live in `$HOME`/root's paths — never `sudo npm`
+over an existing install; and fleet only ever touches clusters through
+site-declared access (`ops/SITES.yaml`), never ambient credentials.
 
 ### What happens after install? (the part most kits skip)
 
