@@ -22,15 +22,12 @@ tar -C "$FLEET_ROOT" --exclude=.git --exclude=.vm --exclude=dist -cf - . | tar -
 cd "$scratch/repo" || exit 1
 
 # empty component registry + minimal gates + single drill site (labfix)
-python3 - "$scratch" <<'EOF'
-import sys, pathlib
-scratch = sys.argv[1]
-p = pathlib.Path(scratch, "repo/ops/PROJECTS.yaml")
-t = p.read_text()
-head = t.split("components:")[0]
-p.write_text(head + "components: []\n")
-g = pathlib.Path(scratch, "repo/lifecycle/gates.yaml")
-g.write_text("""# minimal gates for the C17a replay
+p="$scratch/repo/ops/PROJECTS.yaml"
+n="$(grep -n '^components:' "$p" | head -1 | cut -d: -f1)"
+{ head -n $((n - 1)) "$p"; printf 'components: []\n'; } > "$p.empty"
+mv "$p.empty" "$p"
+cat > "$scratch/repo/lifecycle/gates.yaml" <<'EOF'
+# minimal gates for the C17a replay
 gates_version: 1
 gates:
   - from: built
@@ -48,18 +45,16 @@ gates:
     needs_approvals:
       - dev
       - prod
-""")
-s = pathlib.Path(scratch, "repo/ops/SITES.yaml")
-t = s.read_text()
-s.write_text(f"""sites_version: 1
+EOF
+cat > "$scratch/repo/ops/SITES.yaml" <<EOF
+sites_version: 1
 sites:
   - name: drill
     engine: sos-lab
-    lab_root: {scratch}/lab
+    lab_root: $scratch/lab
     namespace: sos-lab
-    access: kubeconfig:{scratch}/drill.kubeconfig
+    access: kubeconfig:$scratch/drill.kubeconfig
     description: C17a replay site
-""")
 EOF
 
 mkdir -p "$scratch/lab"

@@ -32,9 +32,21 @@ fi
 if [[ -f "$T/run/qemu.pid" ]] && kill -0 "$(cat "$T/run/qemu.pid")" 2>/dev/null; then
   kill "$(cat "$T/run/qemu.pid")" 2>/dev/null; sleep 2
 fi
+# seed server (stdlib Go helper, built once into the gitignored .vm/)
+SEEDBIN="$T/seed-server"
+if [[ ! -x "$SEEDBIN" ]]; then
+  # shellcheck disable=SC1091
+  source "$ROOT/toolchain.env"
+  go_bin="${FLEET_TOOLCHAIN_PREFIX:-}/bin/go"
+  if [[ ! -x "$go_bin" ]]; then
+    go_bin="$(command -v go)" || { echo "VM_UP_FAIL reason=go_toolchain_missing"; exit 1; }
+  fi
+  GOPROXY=off GOFLAGS=-mod=readonly GOTOOLCHAIN=local CGO_ENABLED=0 \
+    "$go_bin" build -trimpath -o "$SEEDBIN" "$ROOT/scripts/vm-tier/seed-server.go" \
+    || { echo "VM_UP_FAIL reason=seed_build_failed"; exit 1; }
+fi
 curl -fsS -m 1 "http://127.0.0.1:$SEED_PORT/meta-data" >/dev/null 2>&1 \
-  || { nohup python3 -m http.server "$SEED_PORT" --bind 127.0.0.1 \
-         --directory "$T/seed" >/dev/null 2>&1 & sleep 1; }
+  || { nohup "$SEEDBIN" -addr "127.0.0.1:$SEED_PORT" -dir "$T/seed" >/dev/null 2>&1 & sleep 1; }
 
 : > "$T/run/console.log"
 [[ -f "$T/run/vars.fd" ]] || cp "$T/qroot/usr/share/OVMF/OVMF_VARS_4M.snakeoil.fd" "$T/run/vars.fd"

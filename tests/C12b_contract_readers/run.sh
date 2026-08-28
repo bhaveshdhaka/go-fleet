@@ -72,16 +72,10 @@ mkdir -p "$FLEET_SECRETS_HOME/hk-03-dev"
 printf 'ALPHA_KEY=real-value-never-read\n' > "$FLEET_SECRETS_HOME/hk-03-dev/alpha.env"
 : > "$scratch/kubeconfig"
 
-python3 - "$repo" "$lab" "$scratch" <<'EOF'
-import re
-import sys, pathlib
-repo, lab, scratch = sys.argv[1], sys.argv[2], sys.argv[3]
-p = pathlib.Path(repo, "ops/SITES.yaml")
-t = re.sub(r"lab_root: .*", f"lab_root: {lab}", p.read_text(), count=1)
-t = re.sub(r"\n    access: .*", f"\n    access: kubeconfig:{scratch}/kubeconfig", t, count=1)
-t = re.sub(r"\n\s*secrets_dir: .*", "", t, count=1)
-p.write_text(t)
-EOF
+# point the copied site registry at the scratch fixture (plain line edits)
+sed -i -e "s|lab_root: .*|lab_root: $lab|" \
+       -e "s|^    access: .*|    access: kubeconfig:$scratch/kubeconfig|" \
+       "$repo/ops/SITES.yaml"
 
 run() { PATH="$scratch/bin:$PATH" FLEET_ROOT="$repo" "$F" "$@" 2>&1; }
 

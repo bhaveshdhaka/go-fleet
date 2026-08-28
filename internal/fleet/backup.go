@@ -1,9 +1,9 @@
 package fleet
 
 import (
-	"encoding/json"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -339,6 +339,14 @@ func opsBackup(oc *opsContext, args []string) int {
 	}
 	names := services
 	sort.Strings(names)
+
+	// explicit names must exist — a typo must never silently back up
+	// nothing (same refusal contract as ops update/remove/restore)
+	for _, name := range names {
+		if oc.lv.LabServices()[name] == nil {
+			return opError(fmt.Errorf("service '%s' is not registered", name))
+		}
+	}
 
 	runner, cleanup, err := newKubectlRunner(oc.site, oc.p.Root)
 	if err != nil {
@@ -829,9 +837,9 @@ func renderResticJob(ns, jobName, svcName, kind string, resticArgs []string) []a
 		},
 	}
 	pod := map[string]any{
-		"containers":  []any{ctr},
+		"containers":    []any{ctr},
 		"restartPolicy": "Never",
-		"volumes":     []any{map[string]any{"name": "data", "persistentVolumeClaim": map[string]any{"claimName": svcName + "-data"}}},
+		"volumes":       []any{map[string]any{"name": "data", "persistentVolumeClaim": map[string]any{"claimName": svcName + "-data"}}},
 	}
 	job := map[string]any{
 		"apiVersion": "batch/v1",

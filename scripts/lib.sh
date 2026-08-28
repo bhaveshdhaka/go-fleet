@@ -124,6 +124,24 @@ tree_hash() {
   ) | sha256sum | cut -d' ' -f1
 }
 
+# jsonq_build <out> : build tests/lib/jsonq.go — stdlib-only JSON query
+# helper. The corpus validates its --json fixtures with this; the test
+# workflow carries no interpreted runtimes (WO-20 close-out).
+jsonq_build() {
+  local out=$1
+  [[ -x "$out" ]] && return 0
+  # shellcheck disable=SC1091
+  source "$FLEET_ROOT/toolchain.env"
+  local go_bin="${FLEET_TOOLCHAIN_PREFIX:-}/bin/go"
+  if [[ ! -x "$go_bin" ]]; then
+    go_bin="$(command -v go)" \
+      || { echo "ERROR: no usable go binary (expected toolchain prefix or PATH)" >&2; return 1; }
+  fi
+  (cd "$FLEET_ROOT" || return 1
+   GOPROXY=off GOFLAGS=-mod=readonly GOTOOLCHAIN=local CGO_ENABLED=0 \
+     "$go_bin" build -trimpath -o "$out" tests/lib/jsonq.go) || return 1
+}
+
 # finalize : emit aggregate (to ${RESULT_DIR}/report.txt) and overall status.
 # Reads RESULT_DIR from the environment. Run units must export RESULT_DIR.
 finalize() {

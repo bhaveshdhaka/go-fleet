@@ -5,7 +5,7 @@
 # (ONLY KUBECONFIG + HOME; bash-injected _/PWD/SHLVL tolerated) and
 # records every call: args + stdin, one numbered pair per call.
 # Asserts: lab-identical machine lines, apply order (secret -> deployment
-# -> service -> 6 monitor docs -> gatus template -> rollouts), state-file
+# -> service -> 5 monitor docs -> gatus template -> rollouts), state-file
 # writes, registry enabled flip, remove state cleanup (the journaled
 # fleet extension), refusal shapes. Cloudflare write paths are covered by
 # the Go httptest suite; the LIVE dual-run is piece 3.
@@ -94,13 +94,15 @@ assert_contains "deploy: DEPLOYED contract" "DEPLOYED beta" "$o"
   && report_fail "no unexpected kubectl calls" "$(cat "$scratch/records/unexpected")" \
   || report_pass "no unexpected kubectl calls"
 
-# call sequence 1..15: secret create, secret apply, dep, svc, rollout,
-# 6 monitor applies, gatus template, 3 rollouts
+# call sequence 1..14: secret create, secret apply, dep, svc, rollout,
+# 3 monitor CMs + dashboard Deployment + Service (the interpreted
+# renderer sidecar CM went away with WO-20 piece 4), gatus template,
+# 3 rollouts
 seq_expect=(
   *"create secret generic beta-env"*
   "apply -f -" "apply -f -" "apply -f -"
   *"rollout status deployment/beta"*
-  "apply -f -" "apply -f -" "apply -f -" "apply -f -" "apply -f -" "apply -f -"
+  "apply -f -" "apply -f -" "apply -f -" "apply -f -" "apply -f -"
   "apply -f $scratch/lab/templates/gatus.yaml"
   *"rollout status deployment/sos-dashboard"*
   *"rollout restart deployment/gatus"*
@@ -119,14 +121,14 @@ done
 
 # apply kinds in order: Secret (from create stdout), dep, svc, then monitor
 kinds=""
-for n in 2 3 4 6 7 8 9 10 11; do
+for n in 2 3 4 6 7 8 9 10; do
   f="$scratch/records/$n.stdin"
   k="$(grep -m1 '^kind:' "$f" | awk '{print $2}')"
   [[ -z "$k" ]] && k="$(grep -o '"kind":"[A-Za-z]*"' "$f" | head -1 | sed 's/.*:"//; s/"//')"
   kinds="$kinds $k"
 done
 assert_eq "applied doc kinds in lab order" \
-  " Secret Deployment Service ConfigMap ConfigMap ConfigMap ConfigMap Deployment Service" "$kinds"
+  " Secret Deployment Service ConfigMap ConfigMap ConfigMap Deployment Service" "$kinds"
 
 # state written in labctl byte format; registry flipped
 grep -q '"tag": "bt1"' "$scratch/lab/state/deployed.json" \

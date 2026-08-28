@@ -36,7 +36,7 @@ cmp -s "$scratch/repo/ops/sites/drillsite/config/registry.yaml" "$scratch/fixtur
   && report_pass "registry byte-preserved" \
   || report_fail "registry byte-preserved" "differs from source"
 assert_file "state imported" "$scratch/repo/ops/sites/drillsite/state/deployed.json"
-assert_file "templates imported" "$scratch/repo/ops/sites/drillsite/templates/dashboard-render.py"
+assert_file "templates imported" "$scratch/repo/ops/sites/drillsite/templates/dashboard-nginx.conf"
 assert_file "archive manifest" "$scratch/repo/ops/sites/drillsite/archive/MIGRATION.md"
 assert_file "archive deployed snapshot" "$scratch/repo/ops/sites/drillsite/archive/deployed.json"
 grep -q "secrets: 2 env files copied" "$scratch/repo/ops/sites/drillsite/archive/MIGRATION.md" \

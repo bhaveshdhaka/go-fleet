@@ -75,9 +75,10 @@ or a state acceptance heals it.
   ACPI shutdown.
 - Journal `#` comment lines are the verify/incident channel (doctor and
   C5c/C6c skip them); WO-5's P4 predicate reads `# verify wo=<id>` lines.
-- The fleet binary never runs python; the only python in this repo is in
-  snapshot DRILL tooling under /tmp (not committed). Goldens freeze the
-  python oracle — keep them green.
+- The fleet binary never runs an interpreter; the repo tree is
+  interpreter-free repo-wide (C20d scans go/yaml/md/sh incl. tests/ and
+  testdata/, from FLEET_ROOT). Goldens freeze the historical labctl
+  formats — keep them green.
 
 ## Session close 2026-08-28 (WO-14..WO-20 + wrap)
 
@@ -87,7 +88,8 @@ or a state acceptance heals it.
 | Backups | trio + secrets home in R2 hk-03-backup (restic 0.17.3); nightly 04:00 CronJobs (critical excluded); retention 7d/4w |
 | Safety | quiesce_state.json crash-safety + sweep; registry critical:true quiesce refusal (openchamber); explicit-names-or---all scope; secrets home lost+recovered incident journaled |
 | Legacy | python:3.12-alpine renderer REPLACED by fleet-built Go (dashboard-render:2026.08.28-r212549); dashboard-render.py deleted; C20d gate GREEN (no interpreted runtimes — repo/rendered/live); golden monitor.json flipped via FLEET_GOLDEN_REGEN |
-| Agent env | global opencode deny: python3/python/pip (physically unrunnable); bootstrap has k3s + deny steps |
-| Corpus | 45u/569a fail=0; check 6/6 |
-| OPEN | (1) C20c kill-test unit; (2) docs RESTORE.md/GLOSSARY.md/PROJECTS-GUIDE.md; (3) OWNER: rotate R2 token + RESTIC_PASSWORD (transited chat) — `restic key add` then remove old; (4) OPENCHAMBER/OPENCODE session state NOT backed up (owner decision: rebuildable) |
-| Secrets note | secrets home was deleted+recovered once (cause unidentified) — rotation (item 3) is strongly advised |
+| Agent env | interpreter deny LIVE: permission block in ~/.config/opencode/opencode.jsonc (mirrors BOOTSTRAP step 6c); corpus is interpreter-free — JSON shape asserts via tests/lib/jsonq (stdlib Go) |
+| Corpus | 46u/577a fail=0 skip=0 (`FLEET_WO=WO-21 ./scripts/fleet verify`, journaled); check 6/6 |
+| OPEN | (1) WO-21 (OPEN): C20c kill-test unit + RESTORE/GLOSSARY/PROJECTS-GUIDE docs; (2) OWNER: rotate R2 token + RESTIC_PASSWORD (transited chat) — `restic key add` then remove old; (3) OPENCHAMBER/OPENCODE session state NOT backed up (owner decision: rebuildable) |
+| Secrets note | secrets home was deleted+recovered once (cause unidentified) — rotation (item 2) is strongly advised |
+| Close-out (owner-directed) | interpreter-free workflow: C12b/C12d/C17a fixture edits are plain sed/awk, C12c/C17c shape asserts via tests/lib/jsonq; labfix renderer fixture deleted (C13b frozen sequence updated to the golden-flipped 14-call order); vm-tier seed server ported to stdlib Go; C20d gate hardened (scans run from FLEET_ROOT — were vacuous inside the corpus — and cover tests/ + testdata/); deny LIVE in user config; WO-20 closed truthfully (pieces 3-6 integrated, P5) with open items split to WO-21 (OPEN); ops backup now REFUSES unknown service names (was a silent `BACKUP OK services=0`); corpus 46u/577a fail=0 + check 6/6 measured |
