@@ -142,7 +142,10 @@ func opsBuild(oc *opsContext, args []string) int {
 
 	tag := labBuildTag(time.Now())
 	compact := strings.ReplaceAll(tag, ".", "")
-	srcCtx := "/workspace/" + filepath.Base(path)
+	srcCtx, err := labWorkspaceHostPath(oc.p.Root, path)
+	if err != nil {
+		return opError(err)
+	}
 	ns := oc.site.Namespace
 
 	submit := func(jobName, ctxPath, dest string, extraArgs []string, dockerfile string) error {
