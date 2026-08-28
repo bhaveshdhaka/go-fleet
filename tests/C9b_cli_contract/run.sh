@@ -24,10 +24,11 @@ hash_tree() { (cd "$repo" && find ops lifecycle ci scripts tests -type f -print0
 o="$(f status)"
 assert_contains "status lists fleetctl" "STATUS component=fleetctl kind=cli stage=built" "$o"
 assert_contains "status lists fleethub" "STATUS component=fleethub kind=service stage=built" "$o"
-assert_contains "status summary" "STATUS SUMMARY components=2" "$o"
+n_comp="$(grep -c '^  - name: ' "$FLEET_ROOT/ops/PROJECTS.yaml")"
+assert_contains "status summary" "STATUS SUMMARY components=$n_comp" "$o"
 
 o="$(f doctor)"
-assert_contains "doctor OK on baseline" "DOCTOR OK checked_components=2 issues=0" "$o"
+assert_contains "doctor OK on baseline" "DOCTOR OK checked_components=$n_comp issues=0" "$o"
 
 d1="$(f promote fleetctl dev --dry-run 2>&1)"; r1=$?
 d2="$(f promote fleetctl dev --dry-run 2>&1)"
@@ -91,6 +92,6 @@ o="$(f approve fleetctl dev)"; rc=$?
   && report_pass "repeat approve idempotent" || report_fail "repeat approve idempotent" "$rc :: $o"
 
 o="$(f doctor)"
-assert_contains "doctor OK after ceremony" "DOCTOR OK checked_components=2 issues=0" "$o"
+assert_contains "doctor OK after ceremony" "DOCTOR OK checked_components=$n_comp issues=0" "$o"
 
 finalize

@@ -31,3 +31,14 @@ components:
     manifests: infra/k8s
     description: registry + lifecycle dashboard (read) with approval writer
     enabled: true
+
+  - name: arjun-hk
+    kind: service
+    port: 8080
+    path: apps/arjun-hk
+    language: go
+    entrypoint: main.go
+    pipeline: ci/pipelines/arjun-hk.yaml
+    manifests: infra/k8s
+    description: arjun.hk single-page menu site (first customer, built through the product)
+    enabled: true

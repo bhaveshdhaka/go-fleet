@@ -38,6 +38,7 @@ assert_eq "prefix CLI stamps VERSION" "fleet $want_ver" "$out"
 
 # FLEET_ROOT discovery still works when invoked via absolute path outside repo
 out="$(cd "$scratch" && FLEET_ROOT="$FLEET_ROOT" "$scratch/prefix/bin/fleet" status 2>&1)"
-assert_contains "CLI resolves repo via explicit FLEET_ROOT" "STATUS SUMMARY components=2" "$out"
+n_comp="$(grep -c '^  - name: ' "$FLEET_ROOT/ops/PROJECTS.yaml")"
+assert_contains "CLI resolves repo via explicit FLEET_ROOT" "STATUS SUMMARY components=$n_comp" "$out"
 
 finalize

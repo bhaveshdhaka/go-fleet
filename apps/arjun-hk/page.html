@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1d3557">
+<title>arjun.hk — dollarbucks menu</title>
+<style>
+  :root {
+    --ink: #1d3557;
+    --paper: #f1faee;
+    --accent: #e63946;
+    --line: #a8dadc;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--paper);
+    color: var(--ink);
+    padding: calc(env(safe-area-inset-top) + 24px) calc(env(safe-area-inset-right) + 20px)
+             calc(env(safe-area-inset-bottom) + 28px) calc(env(safe-area-inset-left) + 20px);
+    max-width: 34em;
+    margin: 0 auto;
+  }
+  header { display: flex; align-items: center; gap: 12px; }
+  h1 { font-size: 1.6rem; letter-spacing: 0.01em; }
+  .sub { color: var(--accent); font-weight: 600; margin-top: 2px; }
+  ul { list-style: none; padding: 0; margin-top: 1.4em; }
+  li {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 12px 2px; border-bottom: 1px solid var(--line);
+  }
+  li .item { font-size: 1.05rem; }
+  li .desc { color: #457b9d; font-size: 0.86rem; }
+  li .dots { flex: 1; border-bottom: 1px dotted var(--line); transform: translateY(-4px); }
+  li .price { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .note { margin-top: 1.4em; font-size: 0.85rem; color: #457b9d; }
+  svg.coin { width: 34px; height: 34px; flex: none; }
+  @media (min-device-pixel-ratio: 2), (-webkit-min-device-pixel-ratio: 2) {
+    body { border-width: 0.5px; }
+    li .price { text-shadow: 0 0 0.4px currentColor; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <svg class="coin" viewBox="0 0 34 34" role="img" aria-label="dollarbuck coin">
+    <circle cx="17" cy="17" r="15" fill="#e63946"/>
+    <circle cx="17" cy="17" r="12.5" fill="none" stroke="#f1faee" stroke-width="1.6"/>
+    <text x="17" y="22" text-anchor="middle" font-size="14" font-weight="bold" fill="#f1faee" font-family="inherit">$</text>
+  </svg>
+  <div>
+    <h1>arjun&rsquo;s menu</h1>
+    <div class="sub">prices in dollarbucks</div>
+  </div>
+</header>
+<ul>
+  <li><span class="item">Waffles</span><span class="dots"></span><span class="price">4</span></li>
+  <li><span class="item">Waffles + hot chocolate</span><span class="dots"></span><span class="price">6</span></li>
+  <li><span class="item">Dino nuggets (six)</span><span class="dots"></span><span class="price">3</span></li>
+  <li><span class="item">Cheese toastie</span><span class="dots"></span><span class="price">2</span></li>
+  <li><span class="item">Mango smoothie</span><span class="dots"></span><span class="price">3</span></li>
+  <li><span class="item">Bedtime story, extra chapter</span><span class="dots"></span><span class="price">1</span></li>
+  <li><span class="item">Sleep-in Saturday voucher</span><span class="dots"></span><span class="price">8</span></li>
+</ul>
+<p class="note">Dollarbucks are the official currency of this household.
+Earn them by helping out; spend them here. No refunds after bedtime.</p>
+</body>
+</html>

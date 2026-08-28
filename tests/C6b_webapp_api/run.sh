@@ -57,7 +57,8 @@ rc=$?
   && report_pass "api lists both components" || report_fail "api lists both components" "$rc :: $api"
 
 apicount="$(printf '%s' "$api" | grep -o '"stage":"' | wc -l | tr -d ' ')"
-assert_eq "api carries stage field per component" 2 "$apicount"
+n_comp="$(grep -c '^  - name: ' "$FLEET_ROOT/ops/PROJECTS.yaml")"
+assert_eq "api carries stage field per component" "$n_comp" "$apicount"
 
 page="$(curl -fsS -m 5 "http://127.0.0.1:$port/" 2>&1)"
 grep -q fleetctl <<<"$page" && grep -q 'fleet hub' <<<"$page" \

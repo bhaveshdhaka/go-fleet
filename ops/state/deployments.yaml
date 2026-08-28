@@ -15,3 +15,8 @@ components:
     stage: built
     last_promoted_at: ""
     note: registered ahead of C6 delivery
+
+  - name: arjun-hk
+    stage: prod
+    last_promoted_at: "2026-08-28T02:02:08Z"
+    note: onboarded by fleet

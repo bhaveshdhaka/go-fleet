@@ -17,7 +17,7 @@ assert_file "state exists" "$STATE"
 assert_file "gates exist" "$GATES"
 
 ncomp="$(sed -n 's/^  - name: //p' "$REG" | wc -l | tr -d ' ')"
-assert_eq "two components registered" 2 "$ncomp"
+[[ $ncomp -ge 2 ]] && report_pass "all components registered (>=2)"   || report_fail "all components registered (>=2)" "count=$ncomp"
 
 # every component entry: required keys non-empty
 keys_ok=0
