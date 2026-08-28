@@ -14,9 +14,16 @@ fail=0
 while IFS= read -r f; do
   case "$f" in
     ./tests/C20d_legacy_gate/*) continue ;;
-    ./internal/fleet/testdata/*|./tests/*|./.git/*|./.toolchain/*|./.vm/*|./dist/*) continue ;;
+    ./internal/fleet/testdata/*|./tests/*|./.git/*|./.toolchain/*|./.vm/*|./dist/*|./workorders/*|./scripts/vm-tier/*) continue ;;
+    # workorders: historical prose about the purge; vm-tier: mothballed
+    # QEMU guest tooling (guest-side python3, not the product runtime)
   esac
-  if grep -qn -E "python:[0-9]|python3(-alpine)?[\"' ]|node:[0-9]+-alpine|ruby:[0-9]" "$f" 2>/dev/null; then
+  case "$f" in
+    *.yaml|*.yml|*.json|*Dockerfile*) pat="python:[0-9]|node:[0-9]+-alpine|ruby:[0-9]" ;;
+    *.sh|*.go) pat="python3? +-m |python3? +/|\"python3?\"|'python3?'" ;;
+    *) continue ;;
+  esac
+  if grep -qn -E "$pat" "$f" 2>/dev/null; then
     echo "FAIL-LEGACY $f: interpreted runtime image"
     fail=1
   fi

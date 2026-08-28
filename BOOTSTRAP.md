@@ -172,3 +172,13 @@ three lines. Do not run any mutating fleet command beyond this
 - End with: exactly one question — what do I want to build first?
 
 ---
+
+### Step 6b — k3s (restore-day path)
+If this box will host the fleet site: install the pinned k3s per
+`scripts/blocks/01-k3s.sh`, write the kubeconfig, and verify
+`kubectl get nodes` Ready before continuing.
+
+### Step 6c — python deny (deterministic)
+Append to the GLOBAL opencode config (~/.config/opencode/opencode.jsonc):
+"permission": { "bash": { "python3 *": "deny", "python *": "deny", "pip*": "deny" } }
+Verify: an agent running `python3 --version` must be refused.
