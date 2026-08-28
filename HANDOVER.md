@@ -78,3 +78,16 @@ or a state acceptance heals it.
 - The fleet binary never runs python; the only python in this repo is in
   snapshot DRILL tooling under /tmp (not committed). Goldens freeze the
   python oracle — keep them green.
+
+## Session close 2026-08-28 (WO-14..WO-20 + wrap)
+
+| Item | State |
+|---|---|
+| Program | WO-14..WO-19 EXECUTED + WO-20 core (backup engine, mocks reconcile, safety rails, trio backup + restore drill, legacy purge) — all pushed (b85b625) |
+| Backups | trio + secrets home in R2 hk-03-backup (restic 0.17.3); nightly 04:00 CronJobs (critical excluded); retention 7d/4w |
+| Safety | quiesce_state.json crash-safety + sweep; registry critical:true quiesce refusal (openchamber); explicit-names-or---all scope; secrets home lost+recovered incident journaled |
+| Legacy | python:3.12-alpine renderer REPLACED by fleet-built Go (dashboard-render:2026.08.28-r212549); dashboard-render.py deleted; C20d gate GREEN (no interpreted runtimes — repo/rendered/live); golden monitor.json flipped via FLEET_GOLDEN_REGEN |
+| Agent env | global opencode deny: python3/python/pip (physically unrunnable); bootstrap has k3s + deny steps |
+| Corpus | 45u/569a fail=0; check 6/6 |
+| OPEN | (1) C20c kill-test unit; (2) docs RESTORE.md/GLOSSARY.md/PROJECTS-GUIDE.md; (3) OWNER: rotate R2 token + RESTIC_PASSWORD (transited chat) — `restic key add` then remove old; (4) OPENCHAMBER/OPENCODE session state NOT backed up (owner decision: rebuildable) |
+| Secrets note | secrets home was deleted+recovered once (cause unidentified) — rotation (item 3) is strongly advised |
