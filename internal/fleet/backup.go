@@ -734,7 +734,7 @@ func opsBackupSchedule(oc *opsContext, cfg *backupConfig, schedule string) int {
 		return opError(err)
 	}
 	for _, name := range oc.lv.LabServiceNames() {
-		if asMap(oc.lv.LabServices()[name]["storage"]) == nil {
+		if asMap(oc.lv.LabServices()[name]["storage"]) == nil || criticalWorkload(oc.lv.LabServices()[name]) {
 			continue
 		}
 		jobName := "backup-" + name

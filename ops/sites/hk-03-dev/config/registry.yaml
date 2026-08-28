@@ -202,4 +202,4 @@ backup:
   bucket: hk-03-backup
   endpoint: https://f04fa041640e4096493366f32948663a.r2.cloudflarestorage.com
   repo: hk-03-dev
-  schedule: none
+  schedule: nightly
