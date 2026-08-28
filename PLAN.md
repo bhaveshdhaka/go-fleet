@@ -1,6 +1,6 @@
 # PLAN.md — go-fleet product program
 
-status: ACTIVE
+status: ACCEPTED
 module: github.com/bhaveshdhaka/go-fleet
 license: MIT
 owner: bhavesh
@@ -65,5 +65,8 @@ data the binary validates, never prompts hoping an LLM behaves.
   green; arjun-hk built THROUGH the product — onboarded, contract-tested,
   gated-promoted to prod, deployed via fleet ops to hk-03-dev, LIVE at
   https://arjun.hk with DNS + monitoring; master checklist evidenced).
-- Next action: **OWNER ACCEPTANCE** (WO-10 STOP). No further mutations
-  until the owner accepts the delivery.
+- 2026-08-28: owner ACCEPTED the WO-10 delivery ("Ok this is good") and
+  directed documentation follow-up (WO-11: fresh Ubuntu install guide
+  covering opencode + openchamber, the no-drama path). Repo stays
+  private until the owner explicitly asks to flip it.
+- Next action: none mandatory. Extension ideas live with the owner.
