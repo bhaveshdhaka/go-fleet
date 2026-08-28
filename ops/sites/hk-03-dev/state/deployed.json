@@ -19,6 +19,13 @@
     "node": "hk-03-dev",
     "tag": "latest"
   },
+  "arjun-hk": {
+    "deployed_at": "2026-08-28T02:11:39Z",
+    "git_sha": "022cd8455ba2c824207b591c9f91f1228cf947c3",
+    "image": "docker-registry.sos-lab.svc.cluster.local:5000/arjun-hk:2026.08.28-r021046",
+    "node": "hk-03-dev",
+    "tag": "2026.08.28-r021046"
+  },
   "nzbdav": {
     "deployed_at": "2026-08-23T11:08:13Z",
     "image": "nzbdav/nzbdav:latest",

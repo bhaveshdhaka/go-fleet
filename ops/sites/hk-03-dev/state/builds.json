@@ -9,6 +9,11 @@
     "git_sha": "e9afeb7d3e1ac6b4402835ecbdffdd152376e57d",
     "tag": "2026.08.25-r131956"
   },
+  "arjun-hk": {
+    "built_at": "2026-08-28T02:11:16Z",
+    "git_sha": "022cd8455ba2c824207b591c9f91f1228cf947c3",
+    "tag": "2026.08.28-r021046"
+  },
   "openchamber": {
     "built_at": "2026-08-25T05:51:27Z",
     "git_sha": "52ee878669867d5cc415f7da7bda1808d51fdf5d",

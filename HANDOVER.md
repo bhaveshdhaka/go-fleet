@@ -1,8 +1,9 @@
 # HANDOVER — go-fleet program
 
 > Read order for any agent arriving cold: `README.md` → `AGENTS.md` (the
-> law) → `PLAN.md` (the program) → this file → `WORKING-NOTES.md` (working
-> instructions, ephemeral — deleted at WO-10). Then `git log --oneline -8`.
+> law) → `PLAN.md` (the program) → this file. Then `git log --oneline -8`.
+> (WORKING-NOTES.md was the ephemeral WO-5..WO-10 working file; deleted at
+> WO-10 with everything worthy codified here and in AGENTS.md.)
 > Facts below are measured, not inferred.
 
 ## State at a glance
@@ -10,16 +11,18 @@
 | Item | State |
 |---|---|
 | Repo | `/home/openchamber/workspaces/fleet`, git clean, master; remote `origin` = github.com/bhaveshdhaka/go-fleet (**private**) |
-| Corpus | 35 units / 433 assertions, fail=0 skip=0 (`bash scripts/test.sh`); `fleet check` 6/6 PASS |
-| Program | `PLAN.md` ACTIVE — next open piece: **WO-10** (arjun.hk end-to-end → STOP for owner acceptance) |
+| Corpus | 37 units / 463 assertions, fail=0 skip=0 (`bash scripts/test.sh`); `fleet check` 6/6 PASS |
+| Program | `PLAN.md` ladder WO-4..WO-10 **EXECUTED** — program awaits **OWNER ACCEPTANCE** (WO-10 STOP gate) |
 | CLI | Go core `cmd/fleet` (module github.com/bhaveshdhaka/go-fleet, `fleet 0.1.0`) behind thin shims `scripts/fleet` + `ci/promote.sh`; binary `dist/fleet` via `ci/build-fleet.sh` |
 | Enforcement | front-matter schema v1, predicates P1-P6, full `next` engine, `.fleet.yaml` actor policy (prod human-gated) |
 | Distribution | MIT LICENSE; `ci/build-release.sh` static linux/darwin + SHA256SUMS (C11a); install.sh installs `prefix/bin/fleet` (C11b); GH repo private |
-| Ops engine | read-only parity (WO-7) + mutations dual-run PASSED (WO-8) + **SITE MIGRATED (WO-9)**: hk-03-dev is `engine: fleet`, data at `ops/sites/hk-03-dev/` (registry/state/templates tracked in git), secrets REFERENCED at `../sos-lab/secrets` (untouched, never copied), history archived with MIGRATION manifest; `site init --from` + `ops register` landed; deploy self-reconciles DNS/tunnel post-flip (deviation #3); post-migration deploy v1→v2→rollback drill verified live via fleet alone |
+| Ops engine | read-only parity (WO-7) + mutations dual-run PASSED (WO-8) + site migrated (WO-9): hk-03-dev is `engine: fleet`, data at `ops/sites/hk-03-dev/` (git-tracked), secrets REFERENCED at `../sos-lab/secrets` (untouched), history archived; `site init --from` + `ops register` + `ops build/deploy/rollback/dns/monitor/remove/verify`; deploy self-reconciles DNS/tunnel post-flip (deviation #3) |
+| arjun-hk | **LIVE at https://arjun.hk** (WO-10): onboarded component (apps/arjun-hk, port 8080), gated promote built→dev→stage→prod (prod approval owner-via-agent per .fleet.yaml, owner directive journaled), kaniko multi-stage image, deployed to hk-03-dev, CNAME arjun.hk retargeted to the lab tunnel, gatus+dashboard monitoring (8 endpoints), HTTP 200 + served-content verified; contract tests C15a (iOS/Safari/retina/menu) run the served binary over loopback |
 | Drilled VM | RUNNING: QEMU pid `.vm/run/qemu.pid` (23088), `fleet-vm Ready v1.36.3+k3s1`, host API 127.0.0.1:16443 |
 | sos-lab | FROZEN ARCHIVE since WO-9: tree byte-identical to post-WO-8 baseline; its `./lab` reports only on its own (stale) data — fleet ops is the arbiter now |
 | Real cluster | hk-03-dev = the host this container runs ON (in-cluster SA `sos-lab/openchamber`). fleet NEVER uses ambient creds — site-declared access only (C12d) |
-| Drill leftovers | 4 completed `build-canary-*` Jobs (2×WO-8, 2×WO-9) + 1 `canary.bhavesh.hk` CNAME — inert, lab-designed residue, documented in journal |
+| Drill leftovers | 4 completed `build-canary-*` Jobs + 1 `canary.bhavesh.hk` CNAME + 1 completed `build-arjun-hk-*` failed-job pod (first kaniko attempt, pre-fix) — inert, documented in journal |
+| STOP | WO-10 ends HERE: master checklist in workorders/WO-10.md all evidenced; **awaiting owner acceptance** — no further mutations |
 
 ## Rules that got agents burned this cycle (now enforced/asserted)
 
@@ -49,12 +52,11 @@
 
 ## Next action
 
-Open `PLAN.md`, execute **WO-10**: `fleet init arjun-hk`; single-page Go
-site (dollarbucks menu, iOS/Safari/retina contract tests); gated promote;
-`ops deploy` to hk-03-dev (fleet-managed); DNS arjun.hk; monitoring.
-Ends with an evidenced master checklist and a **STOP for owner
-acceptance**. arjun.hk zone_id already exists in the site registry
-domains.
+**Owner acceptance of the arjun.hk delivery** (WO-10 STOP gate): review
+the master checklist in `workorders/WO-10.md`, visit https://arjun.hk,
+then either accept (PLAN.md program complete; optionally flip the repo
+public: `gh repo edit bhaveshdhaka/go-fleet --visibility public`) or
+direct changes as a new workorder. No agent mutations until then.
 
 ## Standing cautions
 

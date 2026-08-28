@@ -61,10 +61,9 @@ data the binary validates, never prompts hoping an LLM behaves.
 
 ## State
 
-- Done through WO-9: see HANDOVER.md (corpus 35 units / 433 asserts
-  green; hk-03-dev is a fleet-managed site — engine: fleet, data in
-  ops/sites/hk-03-dev, secrets referenced not copied, history archived;
-  post-migration deploy v1→v2 + rollback drill verified live via fleet
-  alone; sos-lab frozen as archive at its post-WO-8 baseline).
-- Next action: execute WO-10 (arjun-hk end-to-end → STOP for owner
-  acceptance).
+- Done through WO-10: see HANDOVER.md (corpus 37 units / 463 asserts
+  green; arjun-hk built THROUGH the product — onboarded, contract-tested,
+  gated-promoted to prod, deployed via fleet ops to hk-03-dev, LIVE at
+  https://arjun.hk with DNS + monitoring; master checklist evidenced).
+- Next action: **OWNER ACCEPTANCE** (WO-10 STOP). No further mutations
+  until the owner accepts the delivery.

@@ -187,6 +187,6 @@ services:
   arjun-hk:
     namespace: sos-lab
     port: 8080
-    enabled: false
+    enabled: true
     host: arjun.hk
     repo: fleet/apps/arjun-hk
