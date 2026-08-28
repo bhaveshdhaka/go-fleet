@@ -201,7 +201,41 @@ func cmdCheck(args []string) int {
 	if rc != 0 {
 		return rc
 	}
+	jsonMode := false
+	for _, a := range args {
+		if a == "--json" {
+			jsonMode = true
+		}
+	}
 	results := RunPredicates(p)
+	if jsonMode {
+		type cr struct {
+			Predicate string `json:"predicate"`
+			State     string `json:"state"`
+			Detail    string `json:"detail"`
+			Fix       string `json:"fix,omitempty"`
+		}
+		out := make([]cr, 0, len(results))
+		pass, fail, skip := 0, 0, 0
+		for _, r := range results {
+			out = append(out, cr{r.Predicate, r.State, r.Detail, r.Fix})
+			switch r.State {
+			case "PASS":
+				pass++
+			case "FAIL":
+				fail++
+			default:
+				skip++
+			}
+		}
+		if err := emitJSON(map[string]any{
+			"predicates": out,
+			"total":      len(results), "pass": pass, "fail": fail, "skip": skip,
+		}); err != 0 {
+			return err
+		}
+		return boolRc(fail == 0)
+	}
 	pass, fail, skip := 0, 0, 0
 	for _, r := range results {
 		fmt.Printf("CHECK %s %s detail=%s\n", r.Predicate, r.State, r.Detail)

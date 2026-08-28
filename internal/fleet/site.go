@@ -124,14 +124,32 @@ func cmdSite(args []string) int {
 	if err != nil {
 		return failf("sites registry unreadable: %v", err)
 	}
-	fmt.Printf("SITE LIST count=%d\n", len(sites))
+	jsonMode := false
+	for _, a := range args[1:] {
+		if a == "--json" {
+			jsonMode = true
+		}
+	}
+	type sj struct {
+		Name    string `json:"name"`
+		Engine  string `json:"engine"`
+		Access  string `json:"access"`
+		LabRoot string `json:"lab_root"`
+	}
+	out := make([]sj, 0, len(sites))
 	for _, s := range sites {
 		acc := s.Access
 		if !validSiteAccess(acc) {
 			acc = "invalid:" + acc
 		}
-		fmt.Printf("SITE name=%s engine=%s access=%s lab_root=%s\n",
-			s.Name, s.Engine, acc, s.LabRoot)
+		out = append(out, sj{s.Name, s.Engine, acc, s.LabRoot})
+	}
+	if jsonMode {
+		return emitJSON(map[string]any{"sites": out})
+	}
+	fmt.Printf("SITE LIST count=%d\n", len(sites))
+	for _, s := range out {
+		fmt.Printf("SITE name=%s engine=%s access=%s lab_root=%s\n", s.Name, s.Engine, s.Access, s.LabRoot)
 	}
 	return 0
 }

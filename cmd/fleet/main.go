@@ -16,15 +16,15 @@ import (
 var version = "dev"
 
 const helpText = `fleet <command>
-  status [component]                     read-only snapshot
-  doctor                                 read-only drift check
-  next                                   read-only guidance: next legal action
-  check                                  read-only predicates P1-P6 report
+  status [component] [--json]            read-only snapshot
+  doctor [--json]                        read-only drift check
+  next [--json]                          read-only guidance: next legal action
+  check [--json]                         read-only predicates P1-P6 report
   registry-check                         alias of doctor for CI gates
   wo <list|show|new> [...]               workorder surface (schema v1)
   init [dir]                             scaffold the SDLC file skeleton
   onboard <component>                    register component (registry+pipeline+state)
-  site list                              managed sites registry (read-only)
+  site list [--json]                     managed sites registry (read-only)
   site new <name> [--domain D ...]       scaffold a NEW fleet-managed site
                                          [--dry-run]           (MUTATES; WO-15)
   site tunnel create <site> --domain D   CF: create tunnel, store token,
@@ -35,7 +35,7 @@ const helpText = `fleet <command>
                                          fleet-managed data (MUTATES; WO-9)
   infra deploy [--site S]                registry+cloudflared+gatus+dashboard
                                          from site templates  (MUTATES; WO-15)
-  ops <status|doctor>                    site observation, sos-lab parity (read-only)
+  ops <status|doctor> [--json]           site observation, sos-lab parity (read-only)
   ops register <name> [flags]            # register a service in the site registry
   ops <build|deploy|rollback|dns|monitor|remove|verify>
                                          site operations (mutations; WO-8
@@ -43,6 +43,11 @@ const helpText = `fleet <command>
   approve <component> <dev|prod> [who]   write approval file + journal
   promote <component> <to-stage> [...]   gated stage transition
   verify [units...]                      run the test corpus, journal the result
+
+Machine contracts: text summary lines (STATUS SUMMARY / DOCTOR OK|FAIL /
+NEXT action= / CHECK SUMMARY / PROMOTED / APPROVED / BUILT / DEPLOYED /
+INFRA OK / CANARY PASS) are byte-stable; every read verb also accepts
+--json (additive). Exit codes: 0 ok, 1 fail, 2 usage/policy refusal.
 `
 
 func main() {

@@ -123,7 +123,7 @@ func cmdOps(args []string) int {
 
 	switch sub {
 	case "status":
-		return opsStatus(lv, runner, tail)
+		return opsStatus(lv, runner, tail, jsonMode)
 	case "doctor":
 		return opsDoctor(lv, runner, p.Root, jsonMode)
 	}
@@ -134,7 +134,10 @@ func cmdOps(args []string) int {
 // a discarded reachability probe (python prints nothing), pods output is
 // printed with print() semantics (one extra trailing newline), and the
 // services table is ljust-padded in every column including the last.
-func opsStatus(lv *LabView, r *kubectlRunner, args []string) int {
+func opsStatus(lv *LabView, r *kubectlRunner, args []string, jsonMode bool) int {
+	if jsonMode {
+		return opsStatusJSON(lv, r)
+	}
 	fmt.Println("=== cluster ===")
 	nodesOut, nodesErr, nodesRc := r.runStd("get", "nodes", "-o", "wide")
 	if nodesRc != 0 {
@@ -196,6 +199,45 @@ func opsStatus(lv *LabView, r *kubectlRunner, args []string) int {
 		fmt.Print(out)
 	}
 	return 0
+}
+
+// opsStatusJSON is the --json shape of ops status (WO-17): machine view
+// of the same truth — cluster reachability + per-service registry/state.
+func opsStatusJSON(lv *LabView, r *kubectlRunner) int {
+	cluster := r.ClusterReachable()
+	type sj struct {
+		Name   string `json:"name"`
+		State  string `json:"state"`
+		Port   int    `json:"port"`
+		Tag    string `json:"deployed_tag"`
+		SHA    string `json:"sha"`
+		URL    string `json:"url"`
+		HasHost bool  `json:"routed"`
+	}
+	out := make([]sj, 0, len(lv.LabServiceNames()))
+	for _, name := range lv.LabServiceNames() {
+		svc := lv.LabServices()[name]
+		state := "disabled"
+		if asBool(svc["enabled"]) {
+			state = "enabled"
+		}
+		host := asString(svc["host"])
+		url := ""
+		if host != "" {
+			url = "https://" + host
+		}
+		port := asInt(svc["port"])
+		tag := lv.DeployedTag(name)
+		if tag == "-" {
+			tag = ""
+		}
+		sha := lv.StatusSHA(name)
+		if sha == "-" {
+			sha = ""
+		}
+		out = append(out, sj{name, state, port, tag, sha, url, host != ""})
+	}
+	return emitJSON(map[string]any{"site": lv.Site.Name, "cluster": cluster, "services": out})
 }
 
 func printTableRow(cols []string, widths []int) {

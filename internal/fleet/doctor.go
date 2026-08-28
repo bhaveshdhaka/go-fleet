@@ -1,6 +1,7 @@
 package fleet
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -27,22 +28,55 @@ func mustPaths() (Paths, int) {
 	return p, 0
 }
 
+// emitJSON prints one compact JSON document + newline (WO-17 --json
+// surface on read verbs; additive to the text machine contracts). rc: 0.
+func emitJSON(v any) int {
+	raw, err := json.Marshal(v)
+	if err != nil {
+		return failf("json: %v", err)
+	}
+	fmt.Println(string(raw))
+	return 0
+}
+
+// boolRc maps a boolean to the process exit code (0 pass, 1 fail).
+func boolRc(ok bool) int {
+	if ok {
+		return 0
+	}
+	return 1
+}
+
 // cmdStatus mirrors do_status: one STATUS line per (selected) component,
 // then the parseable summary. Missing kind/stage render as '?'.
+// --json (WO-17): {"components":[{component,kind,stage}]} — additive.
 func cmdStatus(args []string) int {
 	p, rc := mustPaths()
 	if rc != 0 {
 		return rc
 	}
+	jsonMode := false
 	sel := ""
-	if len(args) > 0 {
-		sel = args[0]
+	for _, a := range args {
+		if a == "--json" {
+			jsonMode = true
+			continue
+		}
+		if sel == "" {
+			sel = a
+		}
 	}
 	regLines, err := readLines(p.Registry)
 	if err != nil {
 		return failf("registry unreadable at %s", p.Registry)
 	}
 	stateLines, _ := readLines(p.State)
+	type jc struct {
+		Component string `json:"component"`
+		Kind      string `json:"kind"`
+		Stage     string `json:"stage"`
+	}
+	var comps []jc
 	n := 0
 	for _, c := range registryNames(regLines) {
 		if sel != "" && c != sel {
@@ -56,8 +90,14 @@ func cmdStatus(args []string) int {
 		if stage == "" {
 			stage = "?"
 		}
-		fmt.Printf("STATUS component=%s kind=%s stage=%s\n", c, kind, stage)
+		comps = append(comps, jc{c, kind, stage})
 		n++
+	}
+	if jsonMode {
+		return emitJSON(map[string]any{"components": comps})
+	}
+	for _, c := range comps {
+		fmt.Printf("STATUS component=%s kind=%s stage=%s\n", c.Component, c.Kind, c.Stage)
 	}
 	fmt.Printf("STATUS SUMMARY components=%d\n", n)
 	return 0
@@ -80,14 +120,25 @@ func legalStage(s string) bool {
 
 // cmdDoctor mirrors do_doctor: registry path fields on disk, legal stages,
 // gate unit references resolvable, journal lines well-formed. Read-only.
+// --json (WO-17): {"ok":bool,"issues":[...]} — additive.
 func cmdDoctor(args []string) int {
 	p, rc := mustPaths()
 	if rc != 0 {
 		return rc
 	}
+	jsonMode := false
+	for _, a := range args {
+		if a == "--json" {
+			jsonMode = true
+		}
+	}
 	problems := 0
+	var issueList []string
 	problem := func(msg string) {
-		fmt.Printf("DOCTOR ISSUE :: %s\n", msg)
+		if !jsonMode {
+			fmt.Printf("DOCTOR ISSUE :: %s\n", msg)
+		}
+		issueList = append(issueList, msg)
 		problems++
 	}
 
@@ -150,8 +201,14 @@ func cmdDoctor(args []string) int {
 	}
 
 	if problems == 0 {
+		if jsonMode {
+			return emitJSON(map[string]any{"ok": true, "issues": issueList})
+		}
 		fmt.Printf("DOCTOR OK checked_components=%d issues=0\n", cnt)
 		return 0
+	}
+	if jsonMode {
+		return emitJSON(map[string]any{"ok": false, "issues": issueList})
 	}
 	fmt.Printf("DOCTOR FAIL checked_components=%d issues=%d\n", cnt, problems)
 	return 1

@@ -104,7 +104,12 @@ spine.
    values may not.
 6. Machine contract: every mutating command ends with one summary line
    (STATUS SUMMARY / DOCTOR OK|FAIL / PROMOTED|ALREADY AT / APPROVED) that
-   agents parse; keep those formats stable.
+   agents parse; keep those formats stable. Every READ verb (status,
+   doctor, next, check, site list, ops status, ops doctor, ops dns) also
+   accepts --json — additive, same truth, same exit codes (0 ok, 1 fail,
+   2 usage/policy refusal) — prefer --json when scripting; `next` remains
+   the canonical driver of the ship path (lifecycle hops then ops
+   build/deploy for prod-stage components).
 7. NEVER rely on ambient cluster credentials. Every kubectl call that is
    not meant for the real lab cluster MUST set KUBECONFIG explicitly
    (e.g. the drill's .vm/run/kubeconfig). An env-level fallback once hit

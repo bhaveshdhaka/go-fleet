@@ -169,12 +169,32 @@ func cmdNext(args []string) int {
 	if rc != 0 {
 		return rc
 	}
+	jsonMode := false
+	for _, a := range args {
+		if a == "--json" {
+			jsonMode = true
+		}
+	}
+	nextEmit := func(action, reason string) int {
+		if jsonMode {
+			return emitJSON(map[string]any{"action": action, "reason": reason})
+		}
+		fmt.Printf("NEXT action=%s\n", action)
+		fmt.Printf("NEXT reason=%s\n", reason)
+		return 0
+	}
+	nextPred := func(r CheckResult) int {
+		if jsonMode {
+			return emitJSON(map[string]any{"action": r.Fix, "reason": r.Detail, "predicate": r.Predicate})
+		}
+		fmt.Printf("NEXT predicate=%s\n", r.Predicate)
+		fmt.Printf("NEXT action=%s\n", r.Fix)
+		fmt.Printf("NEXT reason=%s\n", r.Detail)
+		return 0
+	}
 	for _, r := range RunPredicates(p) {
 		if r.State == "FAIL" {
-			fmt.Printf("NEXT predicate=%s\n", r.Predicate)
-			fmt.Printf("NEXT action=%s\n", r.Fix)
-			fmt.Printf("NEXT reason=%s\n", r.Detail)
-			return 0
+			return nextPred(r)
 		}
 	}
 
@@ -201,50 +221,33 @@ func cmdNext(args []string) int {
 	}
 	probe := argsProbe{p: p, reg: regLines, state: stateLines, gates: gateLines}
 	if issue := probe.doctorIssue(); issue != "" {
-		fmt.Println("NEXT action=./scripts/fleet doctor")
-		fmt.Printf("NEXT reason=%s\n", issue)
-		return 0
+		return nextEmit("./scripts/fleet doctor", issue)
 	}
 	for _, c := range registryNames(regLines) {
 		stage := stateStage(stateLines, c)
 		switch stage {
 		case "built":
-			fmt.Printf("NEXT action=./scripts/fleet promote %s dev\n", c)
-			fmt.Printf("NEXT reason=%s is built; built->dev needs no approval\n", c)
-			return 0
+			return nextEmit(fmt.Sprintf("./scripts/fleet promote %s dev", c), fmt.Sprintf("%s is built; built->dev needs no approval", c))
 		case "dev":
 			if !HasApproval(ApprovalPath(p, "dev", c)) {
-				fmt.Printf("NEXT action=./scripts/fleet approve %s dev\n", c)
-				fmt.Printf("NEXT reason=dev->stage gate needs the dev approval\n")
-				return 0
+				return nextEmit(fmt.Sprintf("./scripts/fleet approve %s dev", c), "dev->stage gate needs the dev approval")
 			}
-			fmt.Printf("NEXT action=./scripts/fleet promote %s stage\n", c)
-			fmt.Printf("NEXT reason=dev approval present; hop is legal\n")
-			return 0
+			return nextEmit(fmt.Sprintf("./scripts/fleet promote %s stage", c), "dev approval present; hop is legal")
 		case "stage":
 			if !HasApproval(ApprovalPath(p, "prod", c)) {
-				fmt.Printf("NEXT action=./scripts/fleet approve %s prod\n", c)
-				fmt.Printf("NEXT reason=stage->prod gate needs the prod approval\n")
-				return 0
+				return nextEmit(fmt.Sprintf("./scripts/fleet approve %s prod", c), "stage->prod gate needs the prod approval")
 			}
-			fmt.Printf("NEXT action=./scripts/fleet promote %s prod\n", c)
-			fmt.Printf("NEXT reason=prod approval present; hop is legal\n")
-			return 0
+			return nextEmit(fmt.Sprintf("./scripts/fleet promote %s prod", c), "prod approval present; hop is legal")
 		}
 	}
 	// ops ladder (WO-16): a component at prod that maps to a site service
 	// still owes build → deploy. Same registry order; lifecycle hops always
 	// win. A component with no site-registry entry (e.g. kind: cli) is not
 	// shippable and is skipped silently.
-	opsAdvice := nextOpsStep(p, regLines, stateLines)
-	if opsAdvice != nil {
-		fmt.Printf("NEXT action=%s\n", opsAdvice.action)
-		fmt.Printf("NEXT reason=%s\n", opsAdvice.reason)
-		return 0
+	if opsAdvice := nextOpsStep(p, regLines, stateLines); opsAdvice != nil {
+		return nextEmit(opsAdvice.action, opsAdvice.reason)
 	}
-	fmt.Println("NEXT action=none")
-	fmt.Println("NEXT reason=no pending transitions in registry order")
-	return 0
+	return nextEmit("none", "no pending transitions in registry order")
 }
 
 // nextOpsStep returns the first owed ops action for a prod-stage

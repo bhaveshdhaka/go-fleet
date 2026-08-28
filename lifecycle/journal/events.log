@@ -97,3 +97,4 @@ ts=2026-08-28T02:02:08Z event=promoted component=arjun-hk from=stage to=prod act
 # site-canary wo= site=hk-03-dev host=canary.bhavesh.hk result=PASS
 # verify ts=2026-08-28T11:59:24Z wo=WO-15 units=40 pass=494 fail=0 skip=0 result=OK
 # verify ts=2026-08-28T12:21:11Z wo=WO-16 units=42 pass=534 fail=0 skip=0 result=OK
+# verify ts=2026-08-28T12:28:12Z wo=WO-17 units=43 pass=545 fail=0 skip=0 result=OK
