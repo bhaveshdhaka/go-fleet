@@ -1,0 +1,195 @@
+[
+  {
+    "apiVersion": "v1",
+    "data": {
+      "config.yaml": "endpoints:\n- name: alpha\n  url: https://alpha.example.test\n  interval: 60s\n  conditions:\n  - '[STATUS] == 200'\n"
+    },
+    "kind": "ConfigMap",
+    "metadata": {
+      "name": "gatus-config",
+      "namespace": "sos-lab"
+    }
+  },
+  {
+    "apiVersion": "v1",
+    "data": {
+      "hosts.json": "{\"alpha\": \"alpha.example.test\"}",
+      "principles.json": "{\"nested\": {\"deep\": true}, \"tags\": [\"a\", \"b\"], \"text\": \"keep it boring\"}",
+      "state.json": "{\"alpha\": {\"deployed_at\": \"2026-08-27T00:00:00Z\", \"git_sha\": null, \"image\": \"reg.local:5000/alpha:v1\", \"node\": \"hk-03-dev\", \"tag\": \"v1\"}, \"gamma\": {\"deployed_at\": \"2026-08-27T00:00:00Z\", \"image\": \"busybox:1.36\", \"node\": \"hk-03-dev\", \"rolled_back\": true, \"tag\": \"old\"}}"
+    },
+    "kind": "ConfigMap",
+    "metadata": {
+      "name": "dashboard-state",
+      "namespace": "sos-lab"
+    }
+  },
+  {
+    "apiVersion": "v1",
+    "data": {
+      "default.conf": "server {\n    listen 80;\n    location /fixdeadbeef/ {\n        alias /usr/share/nginx/html/;\n        index index.html;\n    }\n}\n"
+    },
+    "kind": "ConfigMap",
+    "metadata": {
+      "name": "dashboard-nginx",
+      "namespace": "sos-lab"
+    }
+  },
+  {
+    "apiVersion": "v1",
+    "data": {
+      "render.py": "import json\nimport os\n\nSTATE = \"/state/state.json\"\nPRINCIPLES = \"/state/principles.json\"\nHOSTS = \"/state/hosts.json\"\nOUT = \"/webroot/index.html\"\n\n\ndef fmt_table(rows):\n    return \"<table>\" + \"\".join(f\"<tr>{row}</tr>\" for row in rows) + \"</table>\"\n\n\nwith open(STATE) as f:\n    state = json.load(f)\nwith open(HOSTS) as f:\n    hosts = json.load(f)\ntry:\n    with open(PRINCIPLES) as f:\n        principles = json.load(f)\nexcept OSError:\n    principles = {}\n\nrows = []\nfor name in sorted(state):\n    entry = state[name]\n    host = hosts.get(name, \"-\")\n    rows.append(f\"<td>{name}</td><td>{entry.get('tag', '-')}</td><td>{host}</td>\")\n\nhtml = \"<html><head><title>sos-lab</title></head><body>\"\nif principles:\n    html += \"<h1>principles</h1>\"\nhtml += fmt_table(rows)\nhtml += \"</body></html>\"\n\nwith open(OUT, \"w\") as f:\n    f.write(html)\n"
+    },
+    "kind": "ConfigMap",
+    "metadata": {
+      "name": "dashboard-render",
+      "namespace": "sos-lab"
+    }
+  },
+  {
+    "apiVersion": "apps/v1",
+    "kind": "Deployment",
+    "metadata": {
+      "labels": {
+        "app": "sos-dashboard"
+      },
+      "name": "sos-dashboard",
+      "namespace": "sos-lab"
+    },
+    "spec": {
+      "replicas": 1,
+      "selector": {
+        "matchLabels": {
+          "app": "sos-dashboard"
+        }
+      },
+      "template": {
+        "metadata": {
+          "labels": {
+            "app": "sos-dashboard"
+          }
+        },
+        "spec": {
+          "containers": [
+            {
+              "image": "nginx:alpine",
+              "imagePullPolicy": "IfNotPresent",
+              "name": "nginx",
+              "ports": [
+                {
+                  "containerPort": 80
+                }
+              ],
+              "readinessProbe": {
+                "httpGet": {
+                  "path": "/fixdeadbeef/",
+                  "port": 80
+                },
+                "initialDelaySeconds": 5,
+                "periodSeconds": 10
+              },
+              "resources": {
+                "limits": {
+                  "memory": "128Mi"
+                },
+                "requests": {
+                  "cpu": "25m",
+                  "memory": "32Mi"
+                }
+              },
+              "volumeMounts": [
+                {
+                  "mountPath": "/usr/share/nginx/html",
+                  "name": "webroot"
+                },
+                {
+                  "mountPath": "/etc/nginx/conf.d/default.conf",
+                  "name": "nginx-conf",
+                  "readOnly": true,
+                  "subPath": "default.conf"
+                }
+              ]
+            },
+            {
+              "command": [
+                "python3",
+                "-u",
+                "/render/render.py"
+              ],
+              "image": "python:3.12-alpine",
+              "imagePullPolicy": "IfNotPresent",
+              "name": "renderer",
+              "resources": {
+                "limits": {
+                  "memory": "256Mi"
+                },
+                "requests": {
+                  "cpu": "25m",
+                  "memory": "64Mi"
+                }
+              },
+              "volumeMounts": [
+                {
+                  "mountPath": "/webroot",
+                  "name": "webroot"
+                },
+                {
+                  "mountPath": "/render",
+                  "name": "render-script",
+                  "readOnly": true
+                },
+                {
+                  "mountPath": "/state",
+                  "name": "state-cm",
+                  "readOnly": true
+                }
+              ]
+            }
+          ],
+          "volumes": [
+            {
+              "emptyDir": {},
+              "name": "webroot"
+            },
+            {
+              "configMap": {
+                "name": "dashboard-nginx"
+              },
+              "name": "nginx-conf"
+            },
+            {
+              "configMap": {
+                "name": "dashboard-render"
+              },
+              "name": "render-script"
+            },
+            {
+              "configMap": {
+                "name": "dashboard-state"
+              },
+              "name": "state-cm"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "apiVersion": "v1",
+    "kind": "Service",
+    "metadata": {
+      "name": "sos-dashboard",
+      "namespace": "sos-lab"
+    },
+    "spec": {
+      "ports": [
+        {
+          "port": 80,
+          "targetPort": 80
+        }
+      ],
+      "selector": {
+        "app": "sos-dashboard"
+      }
+    }
+  }
+]

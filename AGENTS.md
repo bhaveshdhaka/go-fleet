@@ -16,6 +16,20 @@ Two-file rule of this repo:
     ./scripts/fleet site list              # READ-ONLY managed sites registry
     ./scripts/fleet ops <status|doctor>    # READ-ONLY site observation (sos-lab
                                            # parity; explicit access, zero mutations)
+    ./scripts/fleet ops build <svc> [--allow-dirty]
+                                           # kaniko build (MUTATES cluster+state;
+                                           # WO-8 dual-run with ./lab)
+    ./scripts/fleet ops deploy <svc>...    # secret+manifests+rollout+dns+tunnel+
+                                           # monitor+state (MUTATES)
+    ./scripts/fleet ops rollback <svc>     # rollout undo + state record (MUTATES)
+    ./scripts/fleet ops remove <svc> [--delete-data] [--unregister]
+                                           # teardown; also deletes the service's
+                                           # state entries (fleet extension:
+                                           # ./lab remove leaves doctor red)
+    ./scripts/fleet ops dns [--apply]      # read-only drift report; --apply
+                                           # reconciles CNAMEs + tunnel (MUTATES CF)
+    ./scripts/fleet ops monitor            # re-render gatus + dashboard (MUTATES CMs)
+    ./scripts/fleet ops verify <svc> [--expect N]   # curl the public URL (read-only)
     ./scripts/fleet wo list|show|new ...   # workorder surface (schema v1)
     ./scripts/fleet init [dir]             # scaffold the SDLC file skeleton
     ./scripts/fleet onboard <name>         # register component (+pipeline+state)
@@ -32,8 +46,12 @@ spine.
 ## Rules
 
 1. Mutations happen ONLY through ./fleet (init/onboard/approve/promote/
-   verify/wo new) and the numbered block scripts under scripts/blocks/
-   (00–04). No ad-hoc kubectl/curl/mv.
+   verify/wo new, and since WO-8 the ops mutation verbs build/deploy/
+   rollback/remove/dns --apply/monitor) and the numbered block scripts
+   under scripts/blocks/ (00–04). No ad-hoc kubectl/curl/mv. Ops
+   mutations run DUAL-RUN with ./lab on hk-03-dev until WO-8 parity
+   passes (identical results, ./lab doctor ALL CLEAR after every fleet
+   mutation); sos-lab stays authoritative until cutover.
 2. doctor, status, next, wo list/show, and any --dry-run are read-only.
    init, onboard, wo new, approve, promote and verify mutate.
 3. promote RE-RUNS its listed test units right now; stale green logs count

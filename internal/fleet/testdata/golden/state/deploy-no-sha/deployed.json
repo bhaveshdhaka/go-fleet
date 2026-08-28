@@ -1,0 +1,8 @@
+{
+  "alpha": {
+    "deployed_at": "2026-08-27T12:34:56Z",
+    "image": "reg/x:t9",
+    "node": "hk-03-dev",
+    "tag": "t9"
+  }
+}

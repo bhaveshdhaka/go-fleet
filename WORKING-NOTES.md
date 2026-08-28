@@ -7,12 +7,15 @@
 
 ## Where the program is
 
-WO-4 (Go core), WO-5 (enforcement), WO-6 (distribution; gh repo created
-PRIVATE — flip public with `gh repo edit bhaveshdhaka/go-fleet
---visibility public` when the owner says so), WO-7 (read-only ops parity:
-`fleet ops status/doctor` byte-identical with `./lab` against live
-hk-03-dev) are all EXECUTED and committed. Next: **WO-8 ops mutations
-(dual-run with ./lab)** → WO-9 migration → WO-10 arjun.hk.
+WO-4 (Go core), WO-5 (enforcement), WO-6 (distribution), WO-7 (read-only
+ops parity), WO-8 (ops MUTATIONS, dual-run PASSED with identical results)
+are all EXECUTED and committed. Next: **WO-9 site migration** → WO-10
+arjun.hk (then delete this file). WO-8 notes worth keeping until then:
+lab deploys of disabled services rewrite the registry pyyaml-style
+(parser regression TestMiniYamlPyyamlStyle covers it); lab deploy PUTs
+the tunnel pre-flip (new host routes at next dns --apply — mirrored);
+./lab status crashes on null git_sha; lab remove leaves state residue
+(fleet's remove cleans it, journaled deviations #1/#2 in WO-8.md).
 
 ## Environment facts (each one cost time to discover)
 
@@ -99,13 +102,14 @@ hk-03-dev) are all EXECUTED and committed. Next: **WO-8 ops mutations
 - Skipped/deferred honestly: gh visibility is private (owner decides);
   workorder `deferred` piece state was added for that and is journaled.
 
-## WO-8 quick-start
+## WO-8 quick-start (CONSUMED — dual-run passed 2026-08-28)
 
-- Mutations ONLY alongside `./lab` (dual-run, identical results) — the
-  goal's hard rule. sos-lab state writes are tmp+rename atomic
-  (state.py `_write_json_atomic`); DNS = Cloudflare API (tunnel
-  configurations PUT + CNAME ensure; labctl/cloudflare.py); manifests
-  rendered then applied client-side dry-run first.
-- Reuse: `internal/fleet/{lab,kubectl,cloudflare,miniyaml}.go` readers,
-  explicit-kubeconfig runner, `FLEET_ACTOR` convention, journal line
-  format. Zero cluster mutations until both paths agree.
+See workorders/WO-8.md measured results + journal evidence lines. The
+mutation engine lives in `internal/fleet/{labrender,labops,opsmutate,
+pyfmt,jsonio}.go`; the parity oracle is frozen under
+`internal/fleet/testdata/golden/`. For WO-9: `site init --from sos-lab`
+should read ops/SITES.yaml + the sos-lab registry/state and emit
+fleet-side site data; secrets stay untouched; the post-migration deploy +
+rollback drill can reuse the canary pattern (git-initialized source dir,
+`canary`-style registry block, snap/compare harness written from scratch
+in /tmp).

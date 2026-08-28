@@ -17,6 +17,7 @@ import (
 const (
 	LabRegistryHost = "docker-registry.sos-lab.svc.cluster.local:5000"
 	LabKanikoImage  = "gcr.io/kaniko-project/executor:v1.23.2"
+	LabKubeVersion  = "v1.36.3" // labctl KUBE_VERSION (overlay build-arg)
 )
 
 type LabView struct {

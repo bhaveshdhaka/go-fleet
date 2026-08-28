@@ -26,6 +26,9 @@ const helpText = `fleet <command>
   onboard <component>                    register component (registry+pipeline+state)
   site list                              managed sites registry (read-only)
   ops <status|doctor>                    site observation, sos-lab parity (read-only)
+  ops <build|deploy|rollback|dns|monitor|remove|verify>
+                                         site operations, sos-lab parity (WO-8;
+                                         mutations dual-run with ./lab)
   approve <component> <dev|prod> [who]   write approval file + journal
   promote <component> <to-stage> [...]   gated stage transition
   verify [units...]                      run the test corpus, journal the result

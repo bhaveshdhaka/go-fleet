@@ -101,6 +101,7 @@ func yamlNode(lines []yamlLine, i, indent int) (any, int, error) {
 
 func yamlList(lines []yamlLine, i, indent int) (any, int, error) {
 	out := []any{}
+	prevScalar := false
 	for i < len(lines) && lines[i].indent == indent &&
 		(strings.HasPrefix(lines[i].text, "- ") || lines[i].text == "-") {
 		item := strings.TrimPrefix(strings.TrimPrefix(lines[i].text, "-"), " ")
@@ -112,6 +113,7 @@ func yamlList(lines []yamlLine, i, indent int) (any, int, error) {
 			}
 			out = append(out, v)
 			i = next
+			prevScalar = false
 			continue
 		}
 		if k, v, ok := splitYAMLKey(item); ok {
@@ -128,16 +130,31 @@ func yamlList(lines []yamlLine, i, indent int) (any, int, error) {
 			}
 			out = append(out, m)
 			i = j
+			prevScalar = false
 			continue
 		}
 		if item == ">-" || item == "|" || item == "|-" {
 			v, next := yamlFolded(lines, i+1, indent)
 			out = append(out, v)
 			i = next
+			prevScalar = false
 			continue
 		}
 		out = append(out, yamlScalar(item))
 		i++
+		prevScalar = true
+		continue
+	}
+	// plain multi-line scalar continuation INSIDE a list item (pyyaml
+	// safe_dump emits long plain scalars folded across lines at deeper
+	// indent): fold into the previous string item.
+	for i < len(lines) && lines[i].indent > indent && prevScalar {
+		if s, ok := out[len(out)-1].(string); ok {
+			out[len(out)-1] = s + " " + lines[i].text
+			i++
+			continue
+		}
+		break
 	}
 	return out, i, nil
 }

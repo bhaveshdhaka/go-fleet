@@ -1,0 +1,437 @@
+{
+  "alpha": [
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "labels": {
+          "app": "alpha"
+        },
+        "name": "alpha",
+        "namespace": "sos-lab"
+      },
+      "spec": {
+        "replicas": 1,
+        "selector": {
+          "matchLabels": {
+            "app": "alpha"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "alpha"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "env": [
+                  {
+                    "name": "BASE_URL",
+                    "value": "https://alpha.example.test"
+                  },
+                  {
+                    "name": "DATABASE_URI",
+                    "value": "sqlite://./data/db.sqlite"
+                  }
+                ],
+                "envFrom": [
+                  {
+                    "secretRef": {
+                      "name": "alpha-env"
+                    }
+                  }
+                ],
+                "image": "reg.local:5000/alpha:v1",
+                "imagePullPolicy": "IfNotPresent",
+                "livenessProbe": {
+                  "httpGet": {
+                    "path": "/healthz",
+                    "port": 8080
+                  },
+                  "initialDelaySeconds": 30,
+                  "periodSeconds": 30
+                },
+                "name": "alpha",
+                "ports": [
+                  {
+                    "containerPort": 8080
+                  }
+                ],
+                "readinessProbe": {
+                  "httpGet": {
+                    "path": "/healthz",
+                    "port": 8080
+                  },
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 10
+                },
+                "resources": {
+                  "limits": {
+                    "memory": "3Gi"
+                  },
+                  "requests": {
+                    "memory": "256Mi"
+                  }
+                },
+                "volumeMounts": [
+                  {
+                    "mountPath": "/app/data",
+                    "name": "data"
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "data",
+                "persistentVolumeClaim": {
+                  "claimName": "alpha-data"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "alpha",
+        "namespace": "sos-lab"
+      },
+      "spec": {
+        "ports": [
+          {
+            "port": 8080,
+            "targetPort": 8080
+          }
+        ],
+        "selector": {
+          "app": "alpha"
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "name": "alpha-data",
+        "namespace": "sos-lab"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        }
+      }
+    }
+  ],
+  "beta": [
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "labels": {
+          "app": "beta"
+        },
+        "name": "beta",
+        "namespace": "sos-lab"
+      },
+      "spec": {
+        "replicas": 1,
+        "selector": {
+          "matchLabels": {
+            "app": "beta"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "beta"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "args": [
+                  "--port",
+                  "80"
+                ],
+                "image": "docker-registry.sos-lab.svc.cluster.local:5000/beta:bt1",
+                "imagePullPolicy": "IfNotPresent",
+                "livenessProbe": {
+                  "httpGet": {
+                    "path": "/",
+                    "port": 80
+                  },
+                  "initialDelaySeconds": 30,
+                  "periodSeconds": 30
+                },
+                "name": "beta",
+                "ports": [
+                  {
+                    "containerPort": 80
+                  }
+                ],
+                "readinessProbe": {
+                  "httpGet": {
+                    "path": "/",
+                    "port": 80
+                  },
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 10
+                },
+                "resources": {
+                  "limits": {
+                    "memory": "1Gi"
+                  },
+                  "requests": {
+                    "cpu": "50m",
+                    "memory": "128Mi"
+                  }
+                },
+                "securityContext": {
+                  "runAsUser": 1000
+                },
+                "volumeMounts": []
+              }
+            ],
+            "volumes": []
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "beta",
+        "namespace": "sos-lab"
+      },
+      "spec": {
+        "ports": [
+          {
+            "port": 80,
+            "targetPort": 80
+          }
+        ],
+        "selector": {
+          "app": "beta"
+        }
+      }
+    }
+  ],
+  "gamma": [
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "labels": {
+          "app": "gamma"
+        },
+        "name": "gamma",
+        "namespace": "other-ns"
+      },
+      "spec": {
+        "replicas": 1,
+        "selector": {
+          "matchLabels": {
+            "app": "gamma"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "gamma"
+            }
+          },
+          "spec": {
+            "automountServiceAccountToken": true,
+            "containers": [
+              {
+                "env": [
+                  {
+                    "name": "KUBECONFIG",
+                    "value": "/cfg"
+                  }
+                ],
+                "image": "busybox:1.36",
+                "imagePullPolicy": "IfNotPresent",
+                "livenessProbe": {
+                  "httpGet": {
+                    "path": "/",
+                    "port": 8000
+                  },
+                  "initialDelaySeconds": 30,
+                  "periodSeconds": 30
+                },
+                "name": "gamma",
+                "ports": [
+                  {
+                    "containerPort": 8000
+                  }
+                ],
+                "readinessProbe": {
+                  "httpGet": {
+                    "path": "/",
+                    "port": 8000
+                  },
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 10
+                },
+                "resources": {
+                  "limits": {
+                    "memory": "1Gi"
+                  },
+                  "requests": {
+                    "cpu": "50m",
+                    "memory": "128Mi"
+                  }
+                },
+                "volumeMounts": [
+                  {
+                    "mountPath": "/data/sub",
+                    "name": "data",
+                    "subPath": "inner"
+                  },
+                  {
+                    "mountPath": "/kubeconfig-src/cfg",
+                    "name": "host0",
+                    "readOnly": true
+                  },
+                  {
+                    "mountPath": "/",
+                    "name": "kubeconfig"
+                  }
+                ]
+              }
+            ],
+            "initContainers": [
+              {
+                "command": [
+                  "sh",
+                  "-ec",
+                  "sed \"s#127.0.0.1#${KUBE_API_HOST}#g\" \"/kubeconfig-src/cfg\" > \"/out/cfg\""
+                ],
+                "env": [
+                  {
+                    "name": "KUBE_API_HOST",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "fieldPath": "status.hostIP"
+                      }
+                    }
+                  }
+                ],
+                "image": "busybox:1.36",
+                "name": "kubeconfig",
+                "volumeMounts": [
+                  {
+                    "mountPath": "/kubeconfig-src/cfg",
+                    "name": "host0",
+                    "readOnly": true
+                  },
+                  {
+                    "mountPath": "/out",
+                    "name": "kubeconfig"
+                  }
+                ]
+              }
+            ],
+            "serviceAccountName": "gamma-sa",
+            "volumes": [
+              {
+                "name": "data",
+                "persistentVolumeClaim": {
+                  "claimName": "gamma-data"
+                }
+              },
+              {
+                "hostPath": {
+                  "path": "/etc/rancher/k3s/k3s.yaml",
+                  "type": "Directory"
+                },
+                "name": "host0"
+              },
+              {
+                "emptyDir": {},
+                "name": "kubeconfig"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "gamma",
+        "namespace": "other-ns"
+      },
+      "spec": {
+        "ports": [
+          {
+            "port": 8000,
+            "targetPort": 8000
+          }
+        ],
+        "selector": {
+          "app": "gamma"
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ServiceAccount",
+      "metadata": {
+        "name": "gamma-sa",
+        "namespace": "other-ns"
+      }
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "ClusterRoleBinding",
+      "metadata": {
+        "name": "gamma-sa-other-ns-admin"
+      },
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "ClusterRole",
+        "name": "cluster-admin"
+      },
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "gamma-sa",
+          "namespace": "other-ns"
+        }
+      ]
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "name": "gamma-data",
+        "namespace": "other-ns"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "1Gi"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "alpha": {
+    "tag": "v1",
+    "image": "reg.local:5000/alpha:v1",
+    "deployed_at": "2026-08-27T00:00:00Z",
+    "node": "hk-03-dev",
+    "git_sha": null
+  },
+  "gamma": {
+    "tag": "old",
+    "image": "busybox:1.36",
+    "deployed_at": "2026-08-27T00:00:00Z",
+    "node": "hk-03-dev",
+    "rolled_back": true
+  }
+}

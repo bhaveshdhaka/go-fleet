@@ -1,0 +1,6 @@
+[
+  {
+    "hostname": "alpha.example.test",
+    "service": "http://alpha.sos-lab.svc.cluster.local:8080"
+  }
+]

@@ -20,8 +20,10 @@ func cmdOps(args []string) int {
 	if len(args) > 0 {
 		sub = args[0]
 	}
-	if sub != "status" && sub != "doctor" {
-		fmt.Fprintln(os.Stderr, "usage: fleet ops <status|doctor> [--site NAME] [--json] [service]")
+	if sub != "status" && sub != "doctor" &&
+		sub != "build" && sub != "deploy" && sub != "rollback" &&
+		sub != "dns" && sub != "monitor" && sub != "remove" && sub != "verify" {
+		fmt.Fprintln(os.Stderr, "usage: fleet ops <status|doctor|build|deploy|rollback|dns|monitor|remove|verify> [--site NAME] [--json] [args]")
 		return 2
 	}
 	rest := args[1:]
@@ -78,6 +80,32 @@ func cmdOps(args []string) int {
 	}
 	if !validSiteAccess(site.Access) {
 		return failf("site '%s': invalid access mode '%s'", site.Name, site.Access)
+	}
+
+	// mutation verbs resolve their own context (runner is created lazily —
+	// dns/verify never touch the cluster)
+	switch sub {
+	case "build", "deploy", "rollback", "dns", "monitor", "remove", "verify":
+		oc, rc := resolveOpsContext(p, siteName)
+		if rc != 0 {
+			return rc
+		}
+		switch sub {
+		case "build":
+			return opsBuild(oc, tail)
+		case "deploy":
+			return opsDeploy(oc, tail)
+		case "rollback":
+			return opsRollback(oc, tail)
+		case "dns":
+			return opsDNS(oc, tail, jsonMode)
+		case "monitor":
+			return opsMonitor(oc, tail)
+		case "remove":
+			return opsRemove(oc, tail)
+		case "verify":
+			return opsVerify(oc, tail)
+		}
 	}
 
 	lv, err := LoadLabView(site, p.Root)

@@ -104,6 +104,16 @@ current-context: site
 	return r, cleanup, nil
 }
 
+// streamToStdout runs kubectl with stdout+stderr merged to os.Stdout
+// (kubectl logs -f) and returns the command's exit error, if any.
+func (r *kubectlRunner) streamToStdout(args []string) error {
+	cmd := exec.Command("kubectl", args...)
+	cmd.Env = []string{"KUBECONFIG=" + r.kubeconfig, "HOME=" + r.homeDir()}
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stdout
+	return cmd.Run()
+}
+
 // Run execs kubectl with the explicit kubeconfig and a minimal child env.
 // HOME points into the runner's private temp dir: with no HOME kubectl
 // litters a .kube cache into the working directory.

@@ -61,9 +61,12 @@ data the binary validates, never prompts hoping an LLM behaves.
 
 ## State
 
-- Done through WO-7: see HANDOVER.md (corpus 31 units / 347 asserts green;
-  enforcement v1, distribution incl. private GitHub repo, ops engine with
-  byte-identical read-only parity vs ./lab on live hk-03-dev; ZERO
-  mutations so far).
-- Next action: execute WO-8 (ops mutations, dual-run with ./lab until
-  identical, then cutover).
+- Done through WO-8: see HANDOVER.md (corpus 33 units / 392 asserts green;
+  ops engine MUTATIONS live — build/deploy/rollback/dns/monitor/remove
+  dual-run with ./lab on hk-03-dev with identical results, evidenced by
+  normalized snapshot diffs; ZERO mutations before WO-8; canary fully
+  torn down; sos-lab remains authoritative until WO-9 migration).
+- Next action: execute WO-9 (site migration: fleet site init --from
+  sos-lab; hk-03-dev becomes fleet-managed; post-migration deploy +
+  rollback drill), then WO-10 (arjun.hk end-to-end → STOP for owner
+  acceptance).

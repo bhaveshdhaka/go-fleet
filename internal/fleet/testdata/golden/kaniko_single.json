@@ -1,0 +1,63 @@
+{
+  "apiVersion": "batch/v1",
+  "kind": "Job",
+  "metadata": {
+    "labels": {
+      "app": "build-x-1"
+    },
+    "name": "build-x-1",
+    "namespace": "sos-lab"
+  },
+  "spec": {
+    "activeDeadlineSeconds": 3600,
+    "backoffLimit": 0,
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "build-x-1"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "args": [
+              "--context=/workspace/x",
+              "--dockerfile=Dockerfile",
+              "--destination=reg.local:5000/x:t1",
+              "--cache=true",
+              "--cache-repo=reg.local:5000/buildcache",
+              "--insecure"
+            ],
+            "image": "gcr.io/kaniko-project/executor:v1.23.2",
+            "name": "build",
+            "resources": {
+              "limits": {
+                "memory": "8Gi"
+              },
+              "requests": {
+                "cpu": "500m",
+                "memory": "1Gi"
+              }
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/workspace",
+                "name": "workspaces"
+              }
+            ]
+          }
+        ],
+        "restartPolicy": "Never",
+        "volumes": [
+          {
+            "hostPath": {
+              "path": "/workspace",
+              "type": "Directory"
+            },
+            "name": "workspaces"
+          }
+        ]
+      }
+    }
+  }
+}

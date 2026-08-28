@@ -1,6 +1,7 @@
 package fleet
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,10 +13,22 @@ import (
 // comes from the site's secrets/cloudflare.env and is used only as a
 // request header — never logged, journaled, or returned.
 
-const cloudflareAPIBase = "https://api.cloudflare.com/client/v4"
+// cloudflareAPIBase is a var only so tests can point it at a local
+// httptest server; production binaries use the pinned CF endpoint.
+var cloudflareAPIBase = "https://api.cloudflare.com/client/v4"
 
 func cloudflareAPI(token, method, path string) (json.RawMessage, error) {
-	req, err := http.NewRequest(method, cloudflareAPIBase+path, nil)
+	return cloudflareAPIRaw(token, method, path, nil)
+}
+
+func cloudflareAPIRaw(token, method, path string, body []byte) (json.RawMessage, error) {
+	var req *http.Request
+	var err error
+	if body != nil {
+		req, err = http.NewRequest(method, cloudflareAPIBase+path, bytes.NewReader(body))
+	} else {
+		req, err = http.NewRequest(method, cloudflareAPIBase+path, nil)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("CF API %s %s: %v", method, path, err)
 	}
@@ -27,19 +40,19 @@ func cloudflareAPI(token, method, path string) (json.RawMessage, error) {
 		return nil, fmt.Errorf("CF API %s %s unreachable: %v", method, path, err)
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("CF API %s %s: read failed: %v", method, path, err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("CF API %s %s -> HTTP %d: %s", method, path, resp.StatusCode, string(body))
+		return nil, fmt.Errorf("CF API %s %s -> HTTP %d: %s", method, path, resp.StatusCode, string(respBody))
 	}
 	var envelope struct {
 		Success bool            `json:"success"`
 		Errors  json.RawMessage `json:"errors"`
 		Result  json.RawMessage `json:"result"`
 	}
-	if err := json.Unmarshal(body, &envelope); err != nil {
+	if err := json.Unmarshal(respBody, &envelope); err != nil {
 		return nil, fmt.Errorf("CF API %s %s: bad envelope: %v", method, path, err)
 	}
 	if !envelope.Success {
