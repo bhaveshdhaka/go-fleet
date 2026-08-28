@@ -49,6 +49,7 @@ services:
     port: 3000
     namespace: sos-lab
     enabled: true
+    critical: true
     storage:
       size: 10Gi
     mounts:
@@ -190,3 +191,9 @@ services:
     enabled: true
     host: arjun.hk
     repo: fleet/apps/arjun-hk
+
+backup:
+  bucket: hk-03-backup
+  endpoint: https://f04fa041640e4096493366f32948663a.r2.cloudflarestorage.com
+  repo: hk-03-dev
+  schedule: none

@@ -32,7 +32,7 @@ done < <(find . -type f \
 
 # 2. git history: any commit touching those key names outside fixtures
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  hits="$(git log --all --oneline -G"$KEYVAL" 2>/dev/null | head -20)"
+  hits="$(git log --all --oneline -G"$KEYVAL" -- . ":(exclude)ci/audit-secrets.sh" ":(exclude)tests" ":(exclude)internal/fleet/testdata" 2>/dev/null | head -20)"
   if [ -n "$hits" ]; then
     echo "FINDING [history] known secret key names appear in history (review + rotate if real):"
     echo "$hits"
