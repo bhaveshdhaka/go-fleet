@@ -184,3 +184,9 @@ services:
     storage:
       size: 1Gi
       mount: /data
+  arjun-hk:
+    namespace: sos-lab
+    port: 8080
+    enabled: false
+    host: arjun.hk
+    repo: fleet/apps/arjun-hk
