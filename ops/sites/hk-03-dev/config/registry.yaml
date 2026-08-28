@@ -192,6 +192,12 @@ services:
     host: arjun.hk
     repo: fleet/apps/arjun-hk
 
+  dashboard-render:
+    namespace: sos-lab
+    port: 9090
+    enabled: false
+    repo: fleet/apps/dashboard-render
+    critical: true
 backup:
   bucket: hk-03-backup
   endpoint: https://f04fa041640e4096493366f32948663a.r2.cloudflarestorage.com
