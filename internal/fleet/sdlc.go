@@ -232,9 +232,67 @@ func cmdNext(args []string) int {
 			return 0
 		}
 	}
+	// ops ladder (WO-16): a component at prod that maps to a site service
+	// still owes build → deploy. Same registry order; lifecycle hops always
+	// win. A component with no site-registry entry (e.g. kind: cli) is not
+	// shippable and is skipped silently.
+	opsAdvice := nextOpsStep(p, regLines, stateLines)
+	if opsAdvice != nil {
+		fmt.Printf("NEXT action=%s\n", opsAdvice.action)
+		fmt.Printf("NEXT reason=%s\n", opsAdvice.reason)
+		return 0
+	}
 	fmt.Println("NEXT action=none")
 	fmt.Println("NEXT reason=no pending transitions in registry order")
 	return 0
+}
+
+// nextOpsStep returns the first owed ops action for a prod-stage
+// component, or "" when the whole registry is shipped.
+func nextOpsStep(p Paths, regLines, stateLines []string) *nextAction {
+	sites, err := LoadSites(p)
+	if err != nil || len(sites) == 0 {
+		return nil
+	}
+	site := sites[0] // single-site is the default deployment; multi-site passes --site explicitly
+	lv, err := LoadLabView(site, p.Root)
+	if err != nil {
+		return nil
+	}
+	for _, c := range registryNames(regLines) {
+		if stateStage(stateLines, c) != "prod" {
+			continue
+		}
+		svc, ok := lv.LabServices()[c]
+		if !ok {
+			continue
+		}
+		_ = svc
+		builtTag := asString(asMap(lv.Builds[c])["tag"])
+		deployedTag := asString(asMap(lv.Deployed[c])["tag"])
+		if builtTag == "" {
+			return &nextAction{
+				action: fmt.Sprintf("./scripts/fleet ops build --site %s %s", site.Name, c),
+				reason: fmt.Sprintf("%s is at prod and registered on site %s but has no build yet", c, site.Name),
+			}
+		}
+		if deployedTag != builtTag {
+			dep := deployedTag
+			if dep == "" {
+				dep = "nothing"
+			}
+			return &nextAction{
+				action: fmt.Sprintf("./scripts/fleet ops deploy --site %s %s", site.Name, c),
+				reason: fmt.Sprintf("%s build %s is not what is deployed (%s)", c, builtTag, dep),
+			}
+		}
+	}
+	return nil
+}
+
+type nextAction struct {
+	action string
+	reason string
 }
 
 // argsProbe bundles the contract lines doctor needs for one quiet pass.

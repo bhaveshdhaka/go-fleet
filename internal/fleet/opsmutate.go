@@ -722,11 +722,24 @@ func atoiStrict(s string) (int, bool) {
 // re-parse. WO-9: needed for the post-migration drill and WO-10
 // onboarding. The projects.*.services display list is not maintained
 // (nothing in the engine reads it).
+// registerSpec carries every runtime-tuning knob ops register accepts
+// (WO-16): the WO-8 basics plus the sos-lab-parity rich pod spec —
+// storage/mounts/resources/probePath/runAsUser/serviceAccount/args.
+type registerSpec struct {
+	name, host, image, repo, dockerfile string
+	port                                int
+	ns                                  string
+	secrets, envPairs                   []string
+	probePath, runAsUser                string
+	serviceAccount                      string
+	argsList                            []string
+	memReq, memLim, cpuReq, cpuLim      string
+	storageSize, storageMount           string
+	mountSubs, mountHosts               [][2]string // (sub|host, path)
+}
+
 func opsRegister(oc *opsContext, args []string) int {
-	name := ""
-	host, image, repo, dockerfile := "", "", "", ""
-	port := 0
-	ns := oc.site.Namespace
+	spec := registerSpec{ns: oc.site.Namespace}
 	var secrets []string
 	var envPairs []string
 	expectVal := false
@@ -737,21 +750,21 @@ func opsRegister(oc *opsContext, args []string) int {
 			expectVal = false
 			switch prevFlag {
 			case "--host":
-				host = a
+				spec.host = a
 			case "--port":
 				n, ok := atoiStrict(a)
 				if !ok || n <= 0 || n > 65535 {
 					return opError(fmt.Errorf("--port must be an integer 1-65535"))
 				}
-				port = n
+				spec.port = n
 			case "--namespace":
-				ns = a
+				spec.ns = a
 			case "--image":
-				image = a
+				spec.image = a
 			case "--repo":
-				repo = a
+				spec.repo = a
 			case "--dockerfile":
-				dockerfile = a
+				spec.dockerfile = a
 			case "--secret":
 				secrets = append(secrets, a)
 			case "--env":
@@ -759,11 +772,57 @@ func opsRegister(oc *opsContext, args []string) int {
 					return opError(fmt.Errorf("--env must be KEY=value"))
 				}
 				envPairs = append(envPairs, a)
+			case "--probe-path":
+				if !strings.HasPrefix(a, "/") {
+					return opError(fmt.Errorf("--probe-path must start with /"))
+				}
+				spec.probePath = a
+			case "--run-as-user":
+				if _, ok := atoiStrict(a); !ok {
+					return opError(fmt.Errorf("--run-as-user must be an integer uid"))
+				}
+				spec.runAsUser = a
+			case "--service-account":
+				spec.serviceAccount = a
+			case "--args":
+				spec.argsList = append(spec.argsList, a)
+			case "--mem":
+				req, lim, ok := splitReqLim(a)
+				if !ok {
+					return opError(fmt.Errorf("--mem must be REQ[:LIM] (e.g. 256Mi:2Gi)"))
+				}
+				spec.memReq, spec.memLim = req, lim
+			case "--cpu":
+				req, lim, ok := splitReqLim(a)
+				if !ok {
+					return opError(fmt.Errorf("--cpu must be REQ[:LIM] (e.g. 100m:1)"))
+				}
+				spec.cpuReq, spec.cpuLim = req, lim
+			case "--storage":
+				size, mount, ok := splitReqLim(a)
+				if !ok || size == "" {
+					return opError(fmt.Errorf("--storage must be SIZE[:MOUNT] (e.g. 5Gi:/data)"))
+				}
+				spec.storageSize, spec.storageMount = size, mount
+			case "--mount-sub":
+				sub, path, ok := splitReqLim(a)
+				if !ok || sub == "" || !strings.HasPrefix(path, "/") {
+					return opError(fmt.Errorf("--mount-sub must be NAME:/PATH (subPath:mountPath)"))
+				}
+				spec.mountSubs = append(spec.mountSubs, [2]string{sub, path})
+			case "--mount-host":
+				src, dst, ok := splitReqLim(a)
+				if !ok || !strings.HasPrefix(src, "/") || !strings.HasPrefix(dst, "/") {
+					return opError(fmt.Errorf("--mount-host must be /SRC:/DST (hostPath:mountPath)"))
+				}
+				spec.mountHosts = append(spec.mountHosts, [2]string{src, dst})
 			}
 			continue
 		}
 		switch a {
-		case "--host", "--port", "--namespace", "--image", "--repo", "--dockerfile", "--secret", "--env":
+		case "--host", "--port", "--namespace", "--image", "--repo", "--dockerfile", "--secret", "--env",
+			"--probe-path", "--run-as-user", "--service-account", "--args", "--mem", "--cpu", "--storage",
+			"--mount-sub", "--mount-host":
 			expectVal = true
 			prevFlag = a
 			continue
@@ -772,85 +831,154 @@ func opsRegister(oc *opsContext, args []string) int {
 		case strings.HasPrefix(a, "--"):
 			return opError(fmt.Errorf("unknown flag %q for ops register", a))
 		default:
-			if name != "" {
+			if spec.name != "" {
 				return opError(fmt.Errorf("ops register takes exactly one name"))
 			}
-			name = a
+			spec.name = a
 		}
 	}
-	if name == "" || port == 0 {
+	spec.secrets, spec.envPairs = secrets, envPairs
+	if spec.name == "" || spec.port == 0 {
 		return opError(fmt.Errorf(
-			"usage: fleet ops register <name> --port <1-65535> [--host H] [--namespace NS] [--image IMG|--repo DIR] [--secret KEY]... [--env K=V]..."))
+			"usage: fleet ops register <name> --port <1-65535> [--host H] [--namespace NS] [--image IMG|--repo DIR] [--secret KEY]... [--env K=V]... [--probe-path /P] [--run-as-user UID] [--service-account SA] [--args A]... [--mem REQ[:LIM]] [--cpu REQ[:LIM]] [--storage SIZE[:MOUNT]] [--mount-sub NAME:/PATH]... [--mount-host /SRC:/DST]..."))
 	}
-	if !siteNameRe.MatchString(name) {
+	if !siteNameRe.MatchString(spec.name) {
 		return opError(fmt.Errorf("service name must match %s", siteNameRe.String()))
 	}
-	if oc.lv.LabServices()[name] != nil {
-		return opError(fmt.Errorf("service '%s' is already registered", name))
+	if oc.lv.LabServices()[spec.name] != nil {
+		return opError(fmt.Errorf("service '%s' is already registered", spec.name))
 	}
-	if image == "" && repo == "" {
-		return opError(fmt.Errorf("service '%s': needs --image or --repo", name))
+	if spec.image == "" && spec.repo == "" {
+		return opError(fmt.Errorf("service '%s': needs --image or --repo", spec.name))
 	}
-	if err := labRegistryAppendService(oc.labRoot, name, host, port, ns, image, repo, dockerfile, secrets, envPairs); err != nil {
+	if err := labRegistryAppendService(oc.labRoot, spec); err != nil {
 		return opError(err)
 	}
-	fmt.Fprintf(oc.stdout, "registered %s\n", name)
+	fmt.Fprintf(oc.stdout, "registered %s\n", spec.name)
 	fmt.Fprintf(oc.stdout, "next: fill %s if needed, then ./scripts/fleet ops deploy %s\n",
-		filepath.Join(oc.site.secretsDir(oc.p.Root), name+".env"), name)
+		filepath.Join(oc.site.secretsDir(oc.p.Root), spec.name+".env"), spec.name)
 	return 0
+}
+
+// splitReqLim splits REQ[:LIM] on the FIRST colon (hostPath sources and
+// mount paths never contain colons in this contract; storage SIZE never
+// does either).
+func splitReqLim(s string) (string, string, bool) {
+	if s == "" {
+		return "", "", false
+	}
+	i := strings.Index(s, ":")
+	if i < 0 {
+		return s, "", true
+	}
+	return s[:i], s[i+1:], true
 }
 
 // labRegistryAppendService appends a canonical service block at the end
 // of the site registry (the services section is the last section of the
 // file in our contracts), then re-validates.
-func labRegistryAppendService(labRoot, name, host string, port int, ns, image, repo, dockerfile string, secrets, envPairs []string) error {
+func labRegistryAppendService(labRoot string, s registerSpec) error {
 	path := filepath.Join(labRoot, "config", "registry.yaml")
 	lines, err := readLines(path)
 	if err != nil {
 		return err
 	}
 	// refuse if the name is already present as a block
-	if _, _, ok := labServiceBlock(lines, name); ok {
-		return fmt.Errorf("service '%s' is already registered in %s", name, path)
+	if _, _, ok := labServiceBlock(lines, s.name); ok {
+		return fmt.Errorf("service '%s' is already registered in %s", s.name, path)
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "  %s:\n", name)
-	fmt.Fprintf(&b, "    namespace: %s\n", ns)
-	fmt.Fprintf(&b, "    port: %d\n", port)
+	fmt.Fprintf(&b, "  %s:\n", s.name)
+	fmt.Fprintf(&b, "    namespace: %s\n", s.ns)
+	fmt.Fprintf(&b, "    port: %d\n", s.port)
 	fmt.Fprintf(&b, "    enabled: false\n")
-	if host != "" {
-		fmt.Fprintf(&b, "    host: %s\n", host)
+	if s.host != "" {
+		fmt.Fprintf(&b, "    host: %s\n", s.host)
 	}
-	if image != "" {
-		fmt.Fprintf(&b, "    image: %s\n", image)
+	if s.image != "" {
+		fmt.Fprintf(&b, "    image: %s\n", s.image)
 	}
-	if repo != "" {
-		fmt.Fprintf(&b, "    repo: %s\n", repo)
+	if s.repo != "" {
+		fmt.Fprintf(&b, "    repo: %s\n", s.repo)
 	}
-	if dockerfile != "" {
-		fmt.Fprintf(&b, "    dockerfile: %s\n", dockerfile)
+	if s.dockerfile != "" {
+		fmt.Fprintf(&b, "    dockerfile: %s\n", s.dockerfile)
 	}
-	if len(secrets) > 0 {
+	if s.probePath != "" {
+		fmt.Fprintf(&b, "    probePath: %s\n", s.probePath)
+	}
+	if s.runAsUser != "" {
+		fmt.Fprintf(&b, "    runAsUser: %s\n", s.runAsUser)
+	}
+	if s.serviceAccount != "" {
+		fmt.Fprintf(&b, "    serviceAccount: %s\n", s.serviceAccount)
+	}
+	if len(s.argsList) > 0 {
+		b.WriteString("    args:\n")
+		for _, a := range s.argsList {
+			fmt.Fprintf(&b, "    - %s\n", a)
+		}
+	}
+	if len(s.secrets) > 0 {
 		b.WriteString("    secrets:\n")
-		for _, k := range secrets {
+		for _, k := range s.secrets {
 			fmt.Fprintf(&b, "    - %s\n", k)
 		}
 	}
-	if len(envPairs) > 0 {
+	if len(s.envPairs) > 0 {
 		b.WriteString("    env:\n")
-		for _, kv := range envPairs {
+		for _, kv := range s.envPairs {
 			parts := strings.SplitN(kv, "=", 2)
 			fmt.Fprintf(&b, "      %s: %s\n", parts[0], parts[1])
 		}
 	}
+	if s.storageSize != "" {
+		b.WriteString("    storage:\n")
+		fmt.Fprintf(&b, "      size: %s\n", s.storageSize)
+		if s.storageMount != "" {
+			fmt.Fprintf(&b, "      mount: %s\n", s.storageMount)
+		}
+	}
+	if len(s.mountSubs) > 0 || len(s.mountHosts) > 0 {
+		b.WriteString("    mounts:\n")
+		for _, m := range s.mountSubs {
+			fmt.Fprintf(&b, "    - sub: %s\n", m[0])
+			fmt.Fprintf(&b, "      path: %s\n", m[1])
+		}
+		for _, m := range s.mountHosts {
+			fmt.Fprintf(&b, "    - host: %s\n", m[0])
+			fmt.Fprintf(&b, "      path: %s\n", m[1])
+		}
+	}
+	if s.memReq != "" || s.cpuReq != "" || s.memLim != "" || s.cpuLim != "" {
+		b.WriteString("    resources:\n")
+		if s.memReq != "" || s.cpuReq != "" {
+			b.WriteString("      requests:\n")
+			if s.memReq != "" {
+				fmt.Fprintf(&b, "        memory: %s\n", s.memReq)
+			}
+			if s.cpuReq != "" {
+				fmt.Fprintf(&b, "        cpu: %s\n", s.cpuReq)
+			}
+		}
+		if s.memLim != "" || s.cpuLim != "" {
+			b.WriteString("      limits:\n")
+			if s.memLim != "" {
+				fmt.Fprintf(&b, "        memory: %s\n", s.memLim)
+			}
+			if s.cpuLim != "" {
+				fmt.Fprintf(&b, "        cpu: %s\n", s.cpuLim)
+			}
+		}
+	}
 	out := append(append([]string{}, lines...), strings.Split(strings.TrimSuffix(b.String(), "\n"), "\n")...)
 	return labRegistryRewrite(labRoot, out, func(reg map[string]any) error {
-		svc := asMap(asMap(reg["services"])[name])
+		svc := asMap(asMap(reg["services"])[s.name])
 		if svc == nil {
-			return fmt.Errorf("service '%s' missing after registration", name)
+			return fmt.Errorf("service '%s' missing after registration", s.name)
 		}
-		if asInt(svc["port"]) != port {
-			return fmt.Errorf("service '%s': port did not persist", name)
+		if asInt(svc["port"]) != s.port {
+			return fmt.Errorf("service '%s': port did not persist", s.name)
 		}
 		return nil
 	})
