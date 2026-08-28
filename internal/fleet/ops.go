@@ -23,8 +23,8 @@ func cmdOps(args []string) int {
 	if sub != "status" && sub != "doctor" &&
 		sub != "build" && sub != "deploy" && sub != "rollback" &&
 		sub != "dns" && sub != "monitor" && sub != "remove" && sub != "verify" &&
-		sub != "register" {
-		fmt.Fprintln(os.Stderr, "usage: fleet ops <status|doctor|register|build|deploy|rollback|dns|monitor|remove|verify> [--site NAME] [--json] [args]")
+		sub != "register" && sub != "update" {
+		fmt.Fprintln(os.Stderr, "usage: fleet ops <status|doctor|register|update|build|deploy|rollback|dns|monitor|remove|verify> [--site NAME] [--json] [args]")
 		return 2
 	}
 	rest := args[1:]
@@ -86,7 +86,7 @@ func cmdOps(args []string) int {
 	// mutation verbs resolve their own context (runner is created lazily —
 	// dns/verify never touch the cluster)
 	switch sub {
-	case "build", "deploy", "rollback", "dns", "monitor", "remove", "verify", "register":
+	case "build", "deploy", "rollback", "dns", "monitor", "remove", "verify", "register", "update":
 		oc, rc := resolveOpsContext(p, siteName)
 		if rc != 0 {
 			return rc
@@ -108,6 +108,8 @@ func cmdOps(args []string) int {
 			return opsVerify(oc, tail)
 		case "register":
 			return opsRegister(oc, tail)
+		case "update":
+			return opsUpdate(oc, tail)
 		}
 	}
 

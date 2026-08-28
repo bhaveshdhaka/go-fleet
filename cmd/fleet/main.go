@@ -37,7 +37,7 @@ const helpText = `fleet <command>
                                          from site templates  (MUTATES; WO-15)
   ops <status|doctor> [--json]           site observation, sos-lab parity (read-only)
   ops register <name> [flags]            # register a service in the site registry
-  ops <build|deploy|rollback|dns|monitor|remove|verify>
+  ops <build|deploy|rollback|dns|monitor|remove|verify|register|update>
                                          site operations (mutations; WO-8
                                          dual-run PASSED, WO-9 fleet-managed)
   approve <component> <dev|prod> [who]   write approval file + journal

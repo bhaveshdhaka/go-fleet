@@ -7,11 +7,11 @@
     "tag": "2026.08.24-r020944"
   },
   "1edge-mocks": {
-    "deployed_at": "2026-08-25T13:20:33Z",
-    "git_sha": "e9afeb7d3e1ac6b4402835ecbdffdd152376e57d",
-    "image": "docker-registry.sos-lab.svc.cluster.local:5000/1edge-mocks:2026.08.25-r131956",
+    "deployed_at": "2026-08-28T14:38:18Z",
+    "git_sha": "74dd4c7ce6ceb4b4d628eaf0053f2d30286e798c",
+    "image": "docker-registry.sos-lab.svc.cluster.local:5000/1edge-mocks:2026.08.28-r143723",
     "node": "hk-03-dev",
-    "tag": "2026.08.25-r131956"
+    "tag": "2026.08.28-r143723"
   },
   "aiostreams": {
     "deployed_at": "2026-08-23T11:11:49Z",

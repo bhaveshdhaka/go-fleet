@@ -100,3 +100,5 @@ ts=2026-08-28T02:02:08Z event=promoted component=arjun-hk from=stage to=prod act
 # verify ts=2026-08-28T12:28:12Z wo=WO-17 units=43 pass=545 fail=0 skip=0 result=OK
 # verify ts=2026-08-28T12:32:32Z wo=WO-18 units=43 pass=545 fail=0 skip=0 result=OK
 # verify ts=2026-08-28T12:37:36Z wo=WO-19 units=44 pass=550 fail=0 skip=0 result=OK
+# ops-update wo= site=hk-03-dev service=1edge-mocks keys=dockerfile
+# wo=WO-20a mocks-reconcile: out-of-band 1edge-mocks rebuild found (running 2026.08.28-r085804, pre-PR-branch build at 08:58, bypassed fleet state); PR 1ed-ge#35 reviewed (52 files: design program + frozen mocks + mockd stdlib Go, zero secrets) and MERGED (9357d95); rewrite/mocks.Dockerfile added (74dd4c7); ops update 1edge-mocks --dockerfile rewrite/mocks.Dockerfile -> ops build (2026.08.28-r143723 sha=74dd4c7) -> ops deploy -> verify 200 -> doctor all clear

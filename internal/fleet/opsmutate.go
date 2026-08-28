@@ -877,6 +877,160 @@ func splitReqLim(s string) (string, string, bool) {
 // labRegistryAppendService appends a canonical service block at the end
 // of the site registry (the services section is the last section of the
 // file in our contracts), then re-validates.
+// opsUpdate (WO-20a): in-place edit of a registered service's scalar
+// fields — the anchored-edit path for when intent changes WITHOUT a
+// teardown (e.g. the mocks build contract moved to rewrite/ paths).
+// Same flags as register for the scalar surface; structural sections
+// (storage/mounts/resources/args) are register-time decisions.
+func opsUpdate(oc *opsContext, args []string) int {
+	name := ""
+	updates := map[string]string{} // registry key -> new value
+	expectVal := false
+	prevFlag := ""
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if expectVal {
+			expectVal = false
+			switch prevFlag {
+			case "--host":
+				updates["host"] = a
+			case "--image":
+				updates["image"] = a
+			case "--repo":
+				updates["repo"] = a
+			case "--dockerfile":
+				updates["dockerfile"] = a
+			case "--probe-path":
+				if !strings.HasPrefix(a, "/") {
+					return opError(fmt.Errorf("--probe-path must start with /"))
+				}
+				updates["probePath"] = a
+			case "--run-as-user":
+				if _, ok := atoiStrict(a); !ok {
+					return opError(fmt.Errorf("--run-as-user must be an integer uid"))
+				}
+				updates["runAsUser"] = a
+			case "--service-account":
+				updates["serviceAccount"] = a
+			case "--namespace":
+				updates["namespace"] = a
+			}
+			continue
+		}
+		switch a {
+		case "--host", "--image", "--repo", "--dockerfile", "--probe-path",
+			"--run-as-user", "--service-account", "--namespace":
+			expectVal = true
+			prevFlag = a
+			continue
+		}
+		switch {
+		case strings.HasPrefix(a, "--"):
+			return opError(fmt.Errorf("unknown flag %q for ops update", a))
+		default:
+			if name != "" {
+				return opError(fmt.Errorf("ops update takes exactly one service"))
+			}
+			name = a
+		}
+	}
+	if name == "" || len(updates) == 0 {
+		return opError(fmt.Errorf(
+			"usage: fleet ops update <service> [--host H] [--image I] [--repo D] [--dockerfile F] [--probe-path /P] [--run-as-user UID] [--service-account SA] [--namespace NS]"))
+	}
+	svc := oc.lv.LabServices()[name]
+	if svc == nil {
+		return opError(fmt.Errorf("service '%s' is not registered", name))
+	}
+	if err := labRegistryUpdateService(oc.site, oc.p, oc.labRoot, name, updates); err != nil {
+		return opError(err)
+	}
+	keys := make([]string, 0, len(updates))
+	for k := range updates {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	AppendJournal(oc.p.Journal, fmt.Sprintf(
+		"# ops-update wo=%s site=%s service=%s keys=%s",
+		os.Getenv("FLEET_WO"), oc.site.Name, name, strings.Join(keys, ",")))
+	fmt.Fprintf(oc.stdout, "UPDATED %s keys=%s\n", name, strings.Join(keys, ","))
+	fmt.Fprintf(oc.stdout, "next: ./scripts/fleet ops build %s && ./scripts/fleet ops deploy %s\n", name, name)
+	return 0
+}
+
+// labRegistryUpdateService rewrites scalar key lines INSIDE the named
+// service block (anchored edit), then revalidates the whole registry.
+// Unknown keys (absent from the block) are appended at the block end so
+// an update can introduce a field the entry never had.
+func labRegistryUpdateService(site Site, p Paths, labRoot, name string, updates map[string]string) error {
+	path := filepath.Join(labRoot, "config", "registry.yaml")
+	lines, err := readLines(path)
+	if err != nil {
+		return err
+	}
+	start, end, ok := labServiceBlock(lines, name)
+	if !ok {
+		return fmt.Errorf("service '%s' block not found in %s", name, path)
+	}
+	var out []string
+	out = append(out, lines[:start]...)
+	applied := map[string]bool{}
+	for _, ln := range lines[start:end] {
+		replaced := false
+		for key, val := range updates {
+			if strings.HasPrefix(strings.TrimSpace(ln), key+":") {
+				indent := ln[:len(ln)-len(strings.TrimLeft(ln, " "))]
+				out = append(out, indent+key+": "+val)
+				applied[key] = true
+				replaced = true
+				break
+			}
+		}
+		if !replaced {
+			out = append(out, ln)
+		}
+	}
+	// append keys the block never had (keep the enabled flag last-looking:
+	// insert before any trailing blank lines)
+	missing := []string{}
+	for _, key := range []string{"namespace", "host", "image", "repo", "dockerfile",
+		"probePath", "runAsUser", "serviceAccount"} {
+		if _, want := updates[key]; want && !applied[key] {
+			missing = append(missing, "    "+key+": "+updates[key])
+		}
+	}
+	if len(missing) > 0 {
+		insertAt := len(out)
+		for insertAt > start && strings.TrimSpace(out[insertAt-1]) == "" {
+			insertAt--
+		}
+		out = append(out[:insertAt], append(missing, out[insertAt:]...)...)
+	}
+	out = append(out, lines[end:]...)
+	text := strings.Join(out, "\n")
+	if !strings.HasSuffix(text, "\n") {
+		text += "\n"
+	}
+	tmp := path + ".fleet.tmp"
+	if err := os.WriteFile(tmp, []byte(text), 0o644); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return err
+	}
+	// full revalidation by re-parse
+	lv, err := LoadLabView(site, p.Root)
+	if err != nil {
+		return fmt.Errorf("registry edit failed validation: %v", err)
+	}
+	for key, val := range updates {
+		if got := asString(asMap(lv.LabServices()[name])[key]); got != val {
+			return fmt.Errorf("service '%s': %s did not persist (got %q want %q)", name, key, got, val)
+		}
+	}
+	return nil
+}
+
 func labRegistryAppendService(labRoot string, s registerSpec) error {
 	path := filepath.Join(labRoot, "config", "registry.yaml")
 	lines, err := readLines(path)

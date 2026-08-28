@@ -42,7 +42,11 @@ Two-file rule of this repo:
                                            # COPIED into the secrets home)
     ./scripts/fleet ops <status|doctor>    # READ-ONLY site observation (sos-lab
                                            # parity; explicit access, zero mutations)
-    ./scripts/fleet ops register <name> --port N [--host H] [--image I|--repo D]
+    ./scripts/fleet ops update <service> [--host H] [--image I] [--repo D]
+                                           [--dockerfile F] [--probe-path /P] [--run-as-user UID]
+                                           [--service-account SA] [--namespace NS]
+                                           # in-place scalar edit of a registered service
+                                           # (MUTATES; WO-20a) + register line below
                                            [--dockerfile DF] [--secret KEY]... [--env K=V]...
                                            [--probe-path /P] [--run-as-user UID]
                                            [--service-account SA] [--args A]...

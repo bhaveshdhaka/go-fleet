@@ -179,7 +179,7 @@ services:
     enabled: true
     host: mock.1ed.ge
     repo: 1ed-ge
-    dockerfile: design/mocks.Dockerfile
+    dockerfile: rewrite/mocks.Dockerfile
     probePath: /health
     storage:
       size: 1Gi
