@@ -139,7 +139,19 @@ Success criteria: `./install.sh` prints a line containing
 three lines. Do not run any mutating fleet command beyond this
 (`init`/`onboard`/`promote` come later, when I ask for a project).
 
-### Step 7 — the report (print this when everything above is green)
+### Step 7 — openchamber project + the first agent session
+1. Register the fleet repo as an openchamber project so it appears in
+   the UI (openchamber CLI/config — detect the installed openchamber and
+   add the project pointing at `~/workspaces/fleet`; verify it lists).
+2. Seed the FIRST agent session for that project with exactly this
+   brief: "Read AGENTS.md and follow it. Run
+   `./scripts/fleet next` and do what it says; never improvise around a
+   refusal. Report what you find and stop." (Verify the session was
+   created; do not run fleet mutations yourself here.)
+3. Confirm to me: fleet is a project in openchamber, the first session
+   exists, and the human never needs to run fleet commands by hand.
+
+### Step 8 — the report (print this when everything above is green)
 - What was installed: bun, node, opencode (already present), openchamber,
   cloudflared, fleet — with versions.
 - How I reach my agents: (a) SSH + `opencode` (TUI), (b) the UI URL
@@ -147,8 +159,8 @@ three lines. Do not run any mutating fleet command beyond this
 - Where state lives: openchamber in `~/.config/openchamber/`; opencode
   providers/sessions in `~/.local/share/opencode/`; fleet in
   `~/workspaces/fleet` (its own audit journal inside); fleet SECRETS
-  (Cloudflare token, service env files) in `~/.fleet/secrets/<site>/` —
-  outside every git tree, never printed.
+  (Cloudflare token, tunnel token, service env files) in
+  `~/.fleet/secrets/<site>/` — outside every git tree, never printed.
 - How updates work: openchamber — Settings → About buttons or
   `openchamber update`; opencode — offered in the same UI (server
   restarts itself); fleet — `git -C ~/workspaces/fleet pull` then
