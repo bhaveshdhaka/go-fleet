@@ -104,6 +104,8 @@ func Run(cmd string, args []string) int {
 		return cmdCheck(args)
 	case "site":
 		return cmdSite(args)
+	case "infra":
+		return cmdInfra(args)
 	case "ops":
 		return cmdOps(args)
 	default:

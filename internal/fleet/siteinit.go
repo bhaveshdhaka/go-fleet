@@ -216,14 +216,22 @@ func sitesYamlCutover(p Paths, name string, existing Site, found bool) error {
 		out = append(out, entry...)
 		out = append(out, lines[end:]...)
 	} else {
+		ns := existing.Namespace
+		if ns == "" {
+			ns = "sos-lab"
+		}
+		acc := existing.Access
+		if acc == "" {
+			acc = "in-cluster"
+		}
 		out = append(out, lines...)
 		out = append(out,
 			"",
 			"  - name: "+name,
 			"    engine: fleet",
 			"    lab_root: "+labRootRel,
-			"    namespace: sos-lab",
-			"    access: in-cluster",
+			"    namespace: "+ns,
+			"    access: "+acc,
 			"    description: fleet-managed site (migrated "+FleetTS(time.Now())+")")
 	}
 	text := strings.Join(out, "\n")

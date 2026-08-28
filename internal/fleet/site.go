@@ -107,11 +107,18 @@ func cmdSite(args []string) int {
 	if len(args) > 0 {
 		sub = args[0]
 	}
-	if sub == "init" {
+	switch sub {
+	case "init":
 		return cmdSiteInit(args[1:])
+	case "new":
+		return cmdSiteNew(args[1:])
+	case "tunnel":
+		return cmdSiteTunnel(args[1:])
+	case "canary":
+		return cmdSiteCanary(args[1:])
 	}
 	if sub != "list" && sub != "" {
-		return failf("unknown site subcommand '%s' (list|init)", sub)
+		return failf("unknown site subcommand '%s' (list|new|init|tunnel|canary)", sub)
 	}
 	sites, err := LoadSites(p)
 	if err != nil {

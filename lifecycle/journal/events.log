@@ -91,3 +91,6 @@ ts=2026-08-28T02:02:08Z event=promoted component=arjun-hk from=stage to=prod act
 # wo=WO-14 SITES.yaml secrets_dir override line removed (schema key deleted; LoadSites ignores unknown keys)
 # wo=WO-14 live ops doctor via secrets home: 7/7 CNAME ok (CF token resolved from new path); 2 PRE-EXISTING drifts observed, out of scope: tunnel ingress missing arjun.hk (known lab-quirk: next dns --apply adds it), deployed/1edge-mocks tag drift 2026.08.25-r131956 vs running 2026.08.28-r085804 (redeploy ~09:38 today predates this session)
 # verify ts=2026-08-28T11:28:38Z wo=WO-14 units=37 pass=467 fail=0 skip=0 result=OK
+# site-new wo= site=drillsite namespace=sos-lab access=in-cluster templates=5 domain=example.test
+# wo=WO-15 correction: a site new smoke ran against the live root by mistake (no --dry-run, wrong FLEET_ROOT); ops/sites/drillsite + its SITES.yaml entry removed; nothing else touched
+# verify ts=2026-08-28T11:56:00Z wo=WO-15 units=40 pass=494 fail=0 skip=0 result=OK

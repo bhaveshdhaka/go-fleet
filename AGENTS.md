@@ -14,7 +14,28 @@ Two-file rule of this repo:
     ./scripts/fleet next                   # READ-ONLY guidance: next legal action
     ./scripts/fleet check                  # READ-ONLY predicates P1-P6 report
     ./scripts/fleet site list              # READ-ONLY managed sites registry
-    ./scripts/fleet site init <name> --from <dir>
+    ./scripts/fleet site new <name> [--domain D] [--dry-run]
+                                           # scaffold a NEW fleet-managed site:
+                                           # lab root skeleton, embedded
+                                           # templates, SITES.yaml entry,
+                                           # secrets home dir (MUTATES; WO-15;
+                                           # --dry-run is byte-stable, writes
+                                           # nothing)
+    ./scripts/fleet site tunnel create <site> --domain D
+                                           # CF: create named tunnel, store the
+                                           # TUNNEL token in the secrets home
+                                           # (tunnel.env), record tunnel ids +
+                                           # zone in the site registry
+                                           # (MUTATES CF+repo; WO-15)
+    ./scripts/fleet infra deploy [--site S]
+                                           # registry+cloudflared+gatus from
+                                           # site templates + monitor sync
+                                           # (MUTATES cluster; WO-15)
+    ./scripts/fleet site canary [--site S]
+                                           # register→build→deploy→verify→remove
+                                           # drill proving a fresh install end
+                                           # to end (MUTATES; WO-15)
+    ./scripts/fleet site init <name> --from <lab_root>
                                            # migrate external site data into
                                            # ops/sites/<name> + cutover SITES.yaml
                                            # (MUTATES repo; predecessor secrets

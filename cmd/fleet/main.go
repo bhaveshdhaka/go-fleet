@@ -25,8 +25,16 @@ const helpText = `fleet <command>
   init [dir]                             scaffold the SDLC file skeleton
   onboard <component>                    register component (registry+pipeline+state)
   site list                              managed sites registry (read-only)
+  site new <name> [--domain D ...]       scaffold a NEW fleet-managed site
+                                         [--dry-run]           (MUTATES; WO-15)
+  site tunnel create <site> --domain D   CF: create tunnel, store token,
+                                         record ids+zone      (MUTATES; WO-15)
+  site canary [--site S]                 register→build→deploy→verify→remove
+                                         drill of a fresh install  (MUTATES)
   site init <name> --from <lab_root>     migrate an external site to
                                          fleet-managed data (MUTATES; WO-9)
+  infra deploy [--site S]                registry+cloudflared+gatus+dashboard
+                                         from site templates  (MUTATES; WO-15)
   ops <status|doctor>                    site observation, sos-lab parity (read-only)
   ops register <name> [flags]            # register a service in the site registry
   ops <build|deploy|rollback|dns|monitor|remove|verify>

@@ -262,6 +262,14 @@ func yamlScalar(s string) any {
 		}
 		return s[1 : len(s)-1]
 	}
+	if strings.HasPrefix(s, "{") && strings.HasSuffix(s, "}") {
+		// flow empty map ("services: {}" skeletons, WO-15); nested flow
+		// maps are not part of the contract
+		inner := strings.TrimSpace(s[1 : len(s)-1])
+		if inner == "" {
+			return map[string]any{}
+		}
+	}
 	if strings.HasPrefix(s, "[") && strings.HasSuffix(s, "]") {
 		inner := strings.TrimSpace(s[1 : len(s)-1])
 		if inner == "" {
