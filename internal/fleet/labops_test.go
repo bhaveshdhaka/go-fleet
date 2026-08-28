@@ -114,6 +114,18 @@ func TestLabRenderParity(t *testing.T) {
 // assertParity compares rendered object graphs via canonical JSON bytes.
 func assertParity(t *testing.T, name string, got []any, want ...any) {
 	t.Helper()
+	if os.Getenv("FLEET_GOLDEN_REGEN") != "" {
+		// explicit golden regeneration (deliberate behavior change;
+		// journaled) — write the new oracle and pass
+		rel := map[string]string{
+			"monitor_docs": "golden/monitor.json",
+		}[name]
+		if rel != "" {
+			raw, _ := jsonMarshalIndent(got)
+			os.WriteFile(filepath.Join("testdata", rel), raw, 0o644)
+			return
+		}
+	}
 	gotB, err := jsonMarshalIndent(got)
 	if err != nil {
 		t.Fatalf("%s: marshal got: %v", name, err)

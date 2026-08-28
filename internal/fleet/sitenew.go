@@ -24,7 +24,6 @@ var siteNameTemplateOrder = []string{
 	"cloudflared.yaml",
 	"gatus.yaml",
 	"dashboard-nginx.conf",
-	"dashboard-render.py",
 }
 
 func cmdSiteNew(args []string) int {

@@ -14,6 +14,11 @@
     "git_sha": "022cd8455ba2c824207b591c9f91f1228cf947c3",
     "tag": "2026.08.28-r021046"
   },
+  "dashboard-render": {
+    "built_at": "2026-08-28T21:26:19Z",
+    "git_sha": "72b3dcd40426b90802082cc747ab93d1b3777336",
+    "tag": "2026.08.28-r212549"
+  },
   "openchamber": {
     "built_at": "2026-08-25T05:51:27Z",
     "git_sha": "52ee878669867d5cc415f7da7bda1808d51fdf5d",

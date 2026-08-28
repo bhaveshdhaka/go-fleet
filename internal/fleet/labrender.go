@@ -478,10 +478,6 @@ func renderLabMonitorDocs(lv *LabView, root, slug string) ([]any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("missing %s", filepath.Join(labRoot, "templates", "dashboard-nginx.conf"))
 	}
-	renderPy, err := os.ReadFile(filepath.Join(labRoot, "templates", "dashboard-render.py"))
-	if err != nil {
-		return nil, fmt.Errorf("missing %s", filepath.Join(labRoot, "templates", "dashboard-render.py"))
-	}
 	nginxConf := strings.ReplaceAll(string(nginxRaw), "@SLUG@", slug)
 
 	cms := []any{
@@ -506,12 +502,6 @@ func renderLabMonitorDocs(lv *LabView, root, slug string) ([]any, error) {
 			"kind":       "ConfigMap",
 			"metadata":   map[string]any{"name": "dashboard-nginx", "namespace": ns},
 			"data":       map[string]any{"default.conf": nginxConf},
-		},
-		map[string]any{
-			"apiVersion": "v1",
-			"kind":       "ConfigMap",
-			"metadata":   map[string]any{"name": "dashboard-render", "namespace": ns},
-			"data":       map[string]any{"render.py": string(renderPy)},
 		},
 	}
 	dep := map[string]any{
@@ -546,12 +536,10 @@ func renderLabMonitorDocs(lv *LabView, root, slug string) ([]any, error) {
 						},
 						map[string]any{
 							"name":            "renderer",
-							"image":           "python:3.12-alpine",
+							"image":           rendererImage(lv),
 							"imagePullPolicy": "IfNotPresent",
-							"command":         []any{"python3", "-u", "/render/render.py"},
 							"volumeMounts": []any{
 								map[string]any{"name": "webroot", "mountPath": "/webroot"},
-								map[string]any{"name": "render-script", "mountPath": "/render", "readOnly": true},
 								map[string]any{"name": "state-cm", "mountPath": "/state", "readOnly": true},
 							},
 							"resources": map[string]any{
@@ -563,7 +551,6 @@ func renderLabMonitorDocs(lv *LabView, root, slug string) ([]any, error) {
 					"volumes": []any{
 						map[string]any{"name": "webroot", "emptyDir": map[string]any{}},
 						map[string]any{"name": "nginx-conf", "configMap": map[string]any{"name": "dashboard-nginx"}},
-						map[string]any{"name": "render-script", "configMap": map[string]any{"name": "dashboard-render"}},
 						map[string]any{"name": "state-cm", "configMap": map[string]any{"name": "dashboard-state"}},
 					},
 				},
@@ -580,6 +567,16 @@ func renderLabMonitorDocs(lv *LabView, root, slug string) ([]any, error) {
 		},
 	}
 	return append(cms, dep, svcDoc), nil
+}
+
+// rendererImage resolves the fleet-built dashboard-render image (the Go
+// port; the python:3.12-alpine era is gone — WO-20 piece 4).
+func rendererImage(lv *LabView) string {
+	tag := asString(asMap(lv.Builds["dashboard-render"])["tag"])
+	if tag == "" {
+		return "docker-registry.sos-lab.svc.cluster.local:5000/dashboard-render:latest"
+	}
+	return "docker-registry.sos-lab.svc.cluster.local:5000/dashboard-render:" + tag
 }
 
 // labDashboardSlug mirrors cli._dashboard_slug (DASHBOARD_SLUG from the
