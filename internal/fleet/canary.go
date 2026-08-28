@@ -73,7 +73,8 @@ func cmdSiteCanary(args []string) int {
 	host := "canary." + domain
 
 	ops := func(args ...string) int {
-		full := append([]string{"--site", site.Name}, args...)
+		// cmdOps contract: ops <verb> [--site NAME] [args...]
+		full := append([]string{args[0], "--site", site.Name}, args[1:]...)
 		return cmdOps(full)
 	}
 
