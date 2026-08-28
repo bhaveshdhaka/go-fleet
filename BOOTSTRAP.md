@@ -19,8 +19,10 @@ workarounds: if something fails, the agent stops and shows you the output.
 3. Have ready, you will be asked for them:
    - your **domain** and the **subdomain** for the OpenChamber UI
      (example: `example.com` + `oc`, giving `oc.example.com`)
-   - a **Cloudflare API token** for that domain's account (all
-     permissions — it will create the tunnel and the DNS record)
+   - a **Cloudflare API token** for that domain's account with
+     **Cloudflare Tunnel Edit + Zone DNS Edit** on the zones you will
+     serve (it will create the tunnel and the DNS records) — it gets
+     STORED in the fleet secrets home in Step 5
    - approval of a **UI password** (one will be proposed; you can supply
      your own)
 
@@ -35,9 +37,13 @@ in order. Rules that are absolute:
 
 - Before any step that needs a decision or a credential, ASK me. Do not
   guess hostnames, domains, or tokens.
-- The Cloudflare API token is transient: keep it in a shell variable
-  only. Never write it to any file, never echo it, never put it in a
-  git-tracked file or log.
+- The Cloudflare API token is handled with care: keep it in a shell
+  variable while making API calls, never echo it, never put it in a
+  git-tracked file or log. At the END of Step 5 you STORE it in the
+  fleet secrets home (`~/.fleet/secrets/<site>/cloudflare.env`, mode
+  0600) — fleet's own ops engine reads it from there for DNS and
+  monitoring reconciliation. A fresh install that skips this storage
+  leaves `fleet ops dns/monitor/doctor` broken; storing it is required.
 - After every step, VERIFY and show me one line of evidence (command +
   result) before moving on.
 - If any step fails in a way this brief does not cover: STOP and show me
@@ -102,7 +108,18 @@ Verify: `cloudflared --version`.
 3. Install the service so it survives reboots:
    `cloudflared service install <tunnel-token>` (token goes only into
    the systemd unit this creates — that is expected and fine).
-4. Verify: `cloudflared tunnel info <id>` or service status shows the
+4. STORE the Cloudflare API token for fleet (not the tunnel token) —
+   this is required, not optional. Ask me to confirm the site name
+   (default `hk-03-dev` if this box IS the fleet lab host), then:
+   ```bash
+   mkdir -p ~/.fleet/secrets/<site> && chmod 700 ~/.fleet/secrets/<site>
+   umask 077; printf 'CF_API_TOKEN=%s\n' "$CF_API_TOKEN" \
+     > ~/.fleet/secrets/<site>/cloudflare.env; umask 022
+   ```
+   Verify WITHOUT printing the token:
+   `grep -c 'CF_API_TOKEN=' ~/.fleet/secrets/<site>/cloudflare.env`
+   (expect `1`). The file is outside every git tree fleet can see.
+5. Verify: `cloudflared tunnel info <id>` or service status shows the
    connection up, and
    `curl -s -o /dev/null -w '%{http_code}' https://<hostname>` returns a
    2xx/3xx (DNS can take a minute — retry a few times before failing).
@@ -129,7 +146,9 @@ three lines. Do not run any mutating fleet command beyond this
   `https://<hostname>` (works as an app from iPad: browser → Install).
 - Where state lives: openchamber in `~/.config/openchamber/`; opencode
   providers/sessions in `~/.local/share/opencode/`; fleet in
-  `~/workspaces/fleet` (its own audit journal inside).
+  `~/workspaces/fleet` (its own audit journal inside); fleet SECRETS
+  (Cloudflare token, service env files) in `~/.fleet/secrets/<site>/` —
+  outside every git tree, never printed.
 - How updates work: openchamber — Settings → About buttons or
   `openchamber update`; opencode — offered in the same UI (server
   restarts itself); fleet — `git -C ~/workspaces/fleet pull` then

@@ -2,6 +2,7 @@ package fleet
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -17,11 +18,6 @@ type Site struct {
 	Namespace   string
 	Access      string
 	Description string
-	// SecretsDir optionally overrides where the site engine keeps its
-	// gitignored secret env files. Set by site init so a migrated site can
-	// reference the predecessor's secrets WITHOUT copying them (WO-9:
-	// "secrets untouched").
-	SecretsDir string
 }
 
 func validSiteAccess(a string) bool {
@@ -63,8 +59,6 @@ func LoadSites(p Paths) ([]Site, error) {
 			cur.Access = val
 		case "description":
 			cur.Description = strings.Trim(val, `"`)
-		case "secrets_dir":
-			cur.SecretsDir = val
 		}
 	}
 	if cur != nil {
@@ -135,16 +129,24 @@ func cmdSite(args []string) int {
 	return 0
 }
 
-// siteSecretsDir is where the site engine keeps its gitignored secret env
-// files: the secrets_dir override when declared (migrated sites reference
-// the predecessor's gitignored dir — values are never copied), otherwise
-// <lab_root>/secrets.
-func (s Site) secretsDir(root string) string {
-	if s.SecretsDir != "" {
-		if filepath.IsAbs(s.SecretsDir) {
-			return s.SecretsDir
+// secretsDir is where a site's gitignored secret env files live — ALWAYS
+// outside the repo, one mechanism, scoped per site name (WO-14):
+//   - $FLEET_SECRETS_HOME/<site>  — explicit seam (hermetic corpus,
+//     containers, multi-home hosts)
+//   - $HOME/.fleet/secrets/<site> — the default
+//
+// The root parameter is retained for call-site stability. If neither env
+// nor HOME resolve, a TempDir fallback keeps the failure mode a readable
+// "missing <path>" instead of a panic.
+func (s Site) secretsDir(_ string) string {
+	home := os.Getenv("FLEET_SECRETS_HOME")
+	if home == "" {
+		h, err := os.UserHomeDir()
+		if err != nil {
+			home = filepath.Join(os.TempDir(), "fleet-secrets")
+		} else {
+			home = filepath.Join(h, ".fleet", "secrets")
 		}
-		return filepath.Join(root, s.SecretsDir)
 	}
-	return filepath.Join(s.LabRootAbs(root), "secrets")
+	return filepath.Join(home, s.Name)
 }

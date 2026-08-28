@@ -28,6 +28,22 @@ data the binary validates, never prompts hoping an LLM behaves.
   deterministic black-box test spine; blocks 01-04 stay thin bash.
 - 2026-08-27 arjun-hk is the first real customer, built THROUGH the product
   (WO-10), deployed via fleet ops to hk-03-dev at arjun.hk.
+- 2026-08-28 Owner directive: "no more sos lab, only go fleet" — completion
+  program WO-14..WO-19 (this ladder). Human-in-loop = scope approval per
+  workorder (start), prod approvals (runtime), delivery acceptance (end);
+  agents run everything between via the `next` engine.
+- 2026-08-28 Secrets home: ONE mechanism — `$FLEET_SECRETS_HOME/<site>/`
+  when the env seam is set, else `$HOME/.fleet/secrets/<site>/`. The
+  `secrets_dir:` SITES.yaml override is DELETED (no predecessor-tree
+  references ever again); `site init --from` copies predecessor secrets
+  into the secrets home. Secret values never enter git/journal/logs/chat.
+- 2026-08-28 MCP server CUT: the binary contract (next engine, machine
+  summary lines, --json, documented exit codes) is the agent determinism
+  guarantee; an MCP wrapper adds surface without adding determinism.
+  Revisit only on demonstrated friction in the owner's agent workflow.
+- 2026-08-28 openchamber integration lives in BOOTSTRAP.md only (register
+  the fleet project + seed the first agent session); the fleet binary
+  stays openchamber-independent (public-product safety).
 
 ## Pieces (each = one workorder; verify command must pass before integrate)
 
@@ -58,6 +74,38 @@ data the binary validates, never prompts hoping an LLM behaves.
   (dollarbucks menu, iOS/Safari/retina contract tests); gated promote;
   fleet-ops deploy to hk-03-dev; DNS arjun.hk; monitoring.
   verify: master checklist completion list, all items evidenced
+
+Completion program (owner directive 2026-08-28, WO-11..WO-13 docs/public
+already executed):
+
+- WO-14 Secrets divorce: secrets home (one mechanism, outside the repo);
+  `secrets_dir` override deleted; site init copies predecessor secrets;
+  hk-03-dev migrated off ../sos-lab/secrets; BOOTSTRAP.md CF token STORED
+  in the secrets home (transient-only rule deleted).
+  verify: bash scripts/test.sh + ./scripts/fleet check + live ops doctor
+- WO-15 Fresh-install path: `site new` (scaffold, dry-run byte-equality),
+  `site tunnel create` (CF API), `infra deploy` (registry/gatus/dashboard/
+  cloudflared as built-ins), `site canary` (build→deploy→verify→monitor→
+  remove PASS line); one QEMU fresh-site scenario in test-onvm.sh.
+  verify: corpus + VM drill evidence
+- WO-16 Rich register + determinism core: ops register exposes
+  storage/mounts/resources/probePath/runAsUser/args/serviceAccount/
+  dockerfile; `next` engine sequences the full ship path (wo new → onboard
+  → verify → promote dev → ops build → ops deploy → ops verify → prod
+  refusal until approval); golden replay corpus unit of the whole path.
+  verify: corpus (replay unit included)
+- WO-17 Agentic I/O: --json on read verbs + next; exit codes 0/1/2/3
+  documented and asserted; mutation summary lines byte-identical.
+  verify: corpus JSON goldens + exit-code unit
+- WO-18 Onboarding docs: README product rewrite (feature tour framed as
+  problems solved, comparisons, quickstart), docs/QUICKSTART+CONCEPTS+CLI;
+  BOOTSTRAP.md registers the fleet openchamber project + seeds the first
+  agent session; `fleet` no-args guided tour.
+  verify: C9d/C5d doc sync + corpus
+- WO-19 Launch: secrets audit sweep (journal/registry/git history) +
+  release binaries + SHA256SUMS + acceptance checklist; owner flips the
+  final switch (repo already public).
+  verify: audit script + corpus + checklist
 
 ## State
 

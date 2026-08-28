@@ -248,8 +248,8 @@ func joinNames(items []any) string {
 }
 
 // LoadCloudflareToken mirrors cloudflare.load_token: CF_API_TOKEN from
-// the site's secrets dir (honoring the secrets_dir override). The token
-// never leaves this function except to the HTTP client.
+// the site's secrets home (WO-14). The token never leaves this function
+// except to the HTTP client.
 func LoadCloudflareToken(secretsDir string) (string, error) {
 	path := filepath.Join(secretsDir, "cloudflare.env")
 	raw, err := os.ReadFile(path)

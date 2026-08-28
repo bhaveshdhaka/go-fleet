@@ -66,6 +66,16 @@ func TestLabRenderParity(t *testing.T) {
 	scratch := t.TempDir()
 	copyDir(t, labFix, scratch)
 
+	// secrets home seam (WO-14): alpha.env must resolve via the site's
+	// name-scoped secrets dir for the envFrom decision
+	t.Setenv("FLEET_SECRETS_HOME", scratch)
+	if err := os.MkdirAll(filepath.Join(scratch, "fix"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(scratch, "fix", "alpha.env"), []byte("ALPHA_KEY=dummy\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
 	site := Site{Name: "fix", Engine: "sos-lab", LabRoot: scratch, Namespace: "sos-lab", Access: "in-cluster"}
 	lv, err := LoadLabView(site, scratch)
 	if err != nil {
@@ -461,11 +471,21 @@ services:
 	}
 }
 
-// TestSecretsDirOverride guards the WO-9 reference-not-copy contract: the
-// slug and CF-token readers resolve through the site secrets_dir override
-// exactly once (no doubled "secrets" segment).
-func TestSecretsDirOverride(t *testing.T) {
-	dir := t.TempDir()
+// TestSecretsHome guards the WO-14 secrets divorce: one mechanism, scoped
+// per site name — $FLEET_SECRETS_HOME/<site> when the seam is set, else
+// $HOME/.fleet/secrets/<site>. The slug and CF-token readers resolve
+// through the site path exactly once (no doubled "secrets" segment).
+func TestSecretsHome(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("FLEET_SECRETS_HOME", home)
+	site := Site{Name: "drill"}
+	dir := site.secretsDir("")
+	if want := filepath.Join(home, "drill"); dir != want {
+		t.Fatalf("secretsDir: got %q want %q", dir, want)
+	}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(filepath.Join(dir, "cloudflare.env"), []byte("CF_API_TOKEN=x\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -480,8 +500,19 @@ func TestSecretsDirOverride(t *testing.T) {
 	if err != nil || slug != "abc" {
 		t.Fatalf("slug: %q %v", slug, err)
 	}
-	missing := filepath.Join(dir, "secrets")
+	if other := (Site{Name: "other"}).secretsDir(""); other == dir {
+		t.Fatal("secrets home must be name-scoped per site")
+	}
+	missing := filepath.Join(dir, "absent")
 	if _, err := LoadCloudflareToken(missing); err == nil {
 		t.Fatal("missing secrets dir must error")
+	}
+	// no FLEET_SECRETS_HOME -> default under the user's home
+	t.Setenv("FLEET_SECRETS_HOME", "")
+	usr, err := os.UserHomeDir()
+	if err == nil {
+		if got := site.secretsDir(""); got != filepath.Join(usr, ".fleet", "secrets", "drill") {
+			t.Fatalf("default secrets home: got %q", got)
+		}
 	}
 }

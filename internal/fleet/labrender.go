@@ -234,7 +234,7 @@ func renderLabService(lv *LabView, root, name string, svc map[string]any, image 
 	if len(env) > 0 {
 		container["env"] = env
 	}
-	if _, err := os.Stat(filepath.Join(labRoot, "secrets", name+".env")); err == nil {
+	if _, err := os.Stat(filepath.Join(lv.Site.secretsDir(root), name+".env")); err == nil {
 		container["envFrom"] = []any{map[string]any{"secretRef": map[string]any{"name": name + "-env"}}}
 	}
 	if argsSpec := asList(svc["args"]); len(argsSpec) > 0 {

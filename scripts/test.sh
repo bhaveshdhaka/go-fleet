@@ -142,6 +142,10 @@ run_unit() {
   (
     cd "$unit_dir" || exit 3
     export CHUNK="$unit" FLEET_ROOT RESULT_DIR="$result_dir"
+    # secrets home seam (WO-14): every unit resolves site secrets inside
+    # its own result dir — nothing reads the operator's $HOME
+    export FLEET_SECRETS_HOME="$result_dir/secrets-home"
+    mkdir -p "$FLEET_SECRETS_HOME"
     # shellcheck disable=SC1091
     source "$FLEET_ROOT/scripts/lib.sh"
     bash run.sh

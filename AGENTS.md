@@ -17,7 +17,8 @@ Two-file rule of this repo:
     ./scripts/fleet site init <name> --from <dir>
                                            # migrate external site data into
                                            # ops/sites/<name> + cutover SITES.yaml
-                                           # (MUTATES repo; secrets NOT copied)
+                                           # (MUTATES repo; predecessor secrets
+                                           # COPIED into the secrets home)
     ./scripts/fleet ops <status|doctor>    # READ-ONLY site observation (sos-lab
                                            # parity; explicit access, zero mutations)
     ./scripts/fleet ops register <name> --port N [--host H] [--image I|--repo D]
@@ -68,8 +69,13 @@ spine.
 4. Component onboarding = add one entry in ops/PROJECTS.yaml +
    ci/pipelines/<name>.yaml + gate entries if needed. Doctor must go ALL
    CLEAR before any promotion.
-5. Secret values live only in gitignored files outside git — NEVER inside
-   registry/markdown/journal (house rule inherited from sos-lab).
+5. Secret VALUES live only in the fleet secrets home —
+   `$FLEET_SECRETS_HOME/<site>/` when set, else `$HOME/.fleet/secrets/<site>/`
+   — NEVER inside the repo, registry, markdown, journal, or any log
+   (house rule, enforced since WO-14: the `secrets_dir` override is
+   deleted; `site init --from` COPIES predecessor secrets into the
+   secrets home). Key NAMES may appear in the registry and doctor output;
+   values may not.
 6. Machine contract: every mutating command ends with one summary line
    (STATUS SUMMARY / DOCTOR OK|FAIL / PROMOTED|ALREADY AT / APPROVED) that
    agents parse; keep those formats stable.

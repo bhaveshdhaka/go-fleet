@@ -8,6 +8,8 @@ source "$FLEET_ROOT/scripts/lib.sh"
 
 scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
+export FLEET_SECRETS_HOME="$scratch/secrets-home"
+mkdir -p "$FLEET_SECRETS_HOME"
 F="$FLEET_ROOT/dist/fleet"
 [[ -x "$F" ]] || F="$(bash "$FLEET_ROOT/ci/build-fleet.sh" "$scratch/fleet-bin" >/dev/null; echo "$scratch/fleet-bin")"
 
@@ -66,7 +68,8 @@ services:
 EOF
 printf '{"alpha": {"tag": "t1", "image": "reg/alpha:t1", "git_sha": "abcdef1234567890"}}\n' > "$lab/state/deployed.json"
 printf '{}\n' > "$lab/state/builds.json"
-printf 'ALPHA_KEY=real-value-never-read\n' > "$lab/secrets/alpha.env"
+mkdir -p "$FLEET_SECRETS_HOME/hk-03-dev"
+printf 'ALPHA_KEY=real-value-never-read\n' > "$FLEET_SECRETS_HOME/hk-03-dev/alpha.env"
 : > "$scratch/kubeconfig"
 
 python3 - "$repo" "$lab" "$scratch" <<'EOF'
@@ -115,10 +118,10 @@ else
 fi
 
 # missing secret KEY name (not value) must be named, value never shown
-rm "$lab/secrets/alpha.env"
+rm "$FLEET_SECRETS_HOME/hk-03-dev/alpha.env"
 o="$(run ops doctor)"
 assert_contains "doctor: missing secret file named with needed key" \
-  "secrets/alpha.env" "$o"
+  "hk-03-dev/alpha.env" "$o"
 
 # broken registry refused cleanly, rc=1
 printf 'services: [oops\n' > "$lab/config/registry.yaml"

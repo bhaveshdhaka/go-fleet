@@ -5,6 +5,8 @@
 # environment (AGENTS.md rule 7):
 #   access: in-cluster          -> the pod serviceaccount of the site itself
 #   access: kubeconfig:<path>   -> absolute or lab_root-relative kubeconfig
+# Secret env files live OUTSIDE the repo, name-scoped per site (WO-14):
+#   $FLEET_SECRETS_HOME/<site>/  or  $HOME/.fleet/secrets/<site>/
 sites_version: 1
 
 sites:
@@ -14,5 +16,4 @@ sites:
     lab_root: ops/sites/hk-03-dev
     namespace: sos-lab
     access: in-cluster
-    secrets_dir: ../sos-lab/secrets
-    description: fleet-managed site (migrated 2026-08-28T01:14:56Z)
+    description: fleet-managed site (secrets home cutover 2026-08-28, WO-14)

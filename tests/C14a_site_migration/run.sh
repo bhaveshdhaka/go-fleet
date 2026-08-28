@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
-# C14a — site migration (WO-9 piece 1), offline.
+# C14a — site migration (WO-9 piece 1; secrets home since WO-14), offline.
 # `fleet site init <name> --from <lab_root>` must: import registry/state/
-# templates byte-for-byte, write an archive + MIGRATION manifest, append
-# or cutover the SITES.yaml entry (engine: fleet, secrets_dir reference),
-# REFUSE to copy secret values (grep with teeth), refuse re-init and
-# invalid sources, and leave the ops verbs a parseable site.
+# templates byte-for-byte, write an archive + MIGRATION manifest, COPY the
+# predecessor's secrets/*.env into the fleet secrets home (0600, source
+# untouched), cutover the SITES.yaml entry (engine: fleet, NO secrets_dir
+# — the override is deleted from the schema), refuse re-init and invalid
+# sources, and leave the ops verbs a parseable site.
 
 source "$FLEET_ROOT/scripts/lib.sh"
 
 scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
+export FLEET_SECRETS_HOME="$scratch/secrets-home"
+mkdir -p "$FLEET_SECRETS_HOME"
 
 F="$(bash "$FLEET_ROOT/ci/build-fleet.sh" "$scratch/fleet-bin" >/dev/null; echo "$scratch/fleet-bin")"
 [[ -x "$F" ]] || { report_fail "binary builds" "ci/build-fleet.sh failed"; finalize; }
@@ -26,7 +29,7 @@ o="$(FLEET_ROOT="$scratch/repo" "$F" site init drillsite --from "$scratch/fixtur
 rc=$?
 assert_eq "site init rc=0" "0" "$rc"
 assert_contains "site init contract line" "SITE INIT site=drillsite engine=fleet" "$o"
-assert_contains "secrets referenced, not copied" "secrets_dir=" "$o"
+assert_contains "secrets copied count" "secrets_copied=2" "$o"
 
 assert_file "registry imported" "$scratch/repo/ops/sites/drillsite/config/registry.yaml"
 cmp -s "$scratch/repo/ops/sites/drillsite/config/registry.yaml" "$scratch/fixture/config/registry.yaml" \
@@ -36,17 +39,28 @@ assert_file "state imported" "$scratch/repo/ops/sites/drillsite/state/deployed.j
 assert_file "templates imported" "$scratch/repo/ops/sites/drillsite/templates/dashboard-render.py"
 assert_file "archive manifest" "$scratch/repo/ops/sites/drillsite/archive/MIGRATION.md"
 assert_file "archive deployed snapshot" "$scratch/repo/ops/sites/drillsite/archive/deployed.json"
-grep -q "secrets: NOT copied" "$scratch/repo/ops/sites/drillsite/archive/MIGRATION.md" \
-  && report_pass "manifest records secrets-not-copied" \
-  || report_fail "manifest records secrets-not-copied" "missing"
+grep -q "secrets: 2 env files copied" "$scratch/repo/ops/sites/drillsite/archive/MIGRATION.md" \
+  && report_pass "manifest records secrets copied" \
+  || report_fail "manifest records secrets copied" "missing"
 
-# SITES.yaml entry appended with engine fleet + secrets_dir
+# secret file relocated into the secrets home, 0600, value intact
+assert_file "secret in secrets home" "$FLEET_SECRETS_HOME/drillsite/alpha.env"
+perm=$(stat -c '%a' "$FLEET_SECRETS_HOME/drillsite/alpha.env")
+[[ "$perm" == "600" ]] \
+  && report_pass "secret file mode 0600" \
+  || report_fail "secret file mode 0600" "$perm"
+perm=$(stat -c '%a' "$FLEET_SECRETS_HOME/drillsite")
+[[ "$perm" == "700" ]] \
+  && report_pass "secrets home dir mode 0700" \
+  || report_fail "secrets home dir mode 0700" "$perm"
+
+# SITES.yaml entry appended with engine fleet and NO secrets_dir key
 grep -A5 "  - name: drillsite" "$scratch/repo/ops/SITES.yaml" | grep -q "engine: fleet" \
   && report_pass "SITES.yaml: engine fleet" \
   || report_fail "SITES.yaml: engine fleet" "missing"
-grep -A5 "  - name: drillsite" "$scratch/repo/ops/SITES.yaml" | grep -q "secrets_dir: ../fixture/secrets" \
-  && report_pass "SITES.yaml: secrets_dir reference" \
-  || report_fail "SITES.yaml: secrets_dir reference" "missing"
+grep -A6 "  - name: drillsite" "$scratch/repo/ops/SITES.yaml" | grep -q "secrets_dir" \
+  && report_fail "SITES.yaml: no secrets_dir key" "override key present" \
+  || report_pass "SITES.yaml: no secrets_dir key"
 
 # SECRET VALUE must not exist anywhere under the fleet tree
 if grep -rq "$SECRET_VALUE" "$scratch/repo"; then
@@ -54,6 +68,11 @@ if grep -rq "$SECRET_VALUE" "$scratch/repo"; then
 else
   report_pass "no secret values in fleet tree"
 fi
+
+# the SOURCE secret file is untouched (WO-9 constraint preserved)
+grep -q "$SECRET_VALUE" "$scratch/fixture/secrets/alpha.env" \
+  && report_pass "source secret untouched" \
+  || report_fail "source secret untouched" "source modified"
 
 # site list shows the migrated site; ops verbs accept engine fleet
 o="$(FLEET_ROOT="$scratch/repo" "$F" site list 2>&1)"

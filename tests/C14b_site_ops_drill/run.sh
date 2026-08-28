@@ -11,6 +11,8 @@ source "$FLEET_ROOT/scripts/lib.sh"
 
 scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
+export FLEET_SECRETS_HOME="$scratch/secrets-home"
+mkdir -p "$FLEET_SECRETS_HOME"
 
 F="$(bash "$FLEET_ROOT/ci/build-fleet.sh" "$scratch/fleet-bin" >/dev/null; echo "$scratch/fleet-bin")"
 [[ -x "$F" ]] || { report_fail "binary builds" "ci/build-fleet.sh failed"; finalize; }
@@ -39,6 +41,7 @@ case "$*" in
   *"rollout status"*|*"rollout undo"*|*"rollout restart"*) : ;;
   *"delete deployment"*|*"delete service"*|*"delete pvc"*|*"delete job"*) : ;;
   *"get rs"*) echo '{"items":[]}' ;;
+  *"create secret generic"*) printf 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: drillsvc-env\n' ;;
   apply\ -f\ *gatus.yaml) : ;;
   "apply -f -") echo "configured" ;;
   *) echo "unexpected: $*" >> "$rec/unexpected"; exit 97 ;;
@@ -68,7 +71,9 @@ o="$(FLEET_ROOT="$scratch/repo" PATH="$scratch/bin:$PATH" "$F" ops register --si
 assert_contains "image-or-repo refused" "needs --image or --repo" "$o"
 
 # fill the declared secret file exactly as the register contract instructs
-printf 'DRILL_KEY=drilldummy\n' > "$scratch/fixture/secrets/drillsvc.env"
+# (secrets home, name-scoped per site — WO-14)
+mkdir -p "$FLEET_SECRETS_HOME/drillsite"
+printf 'DRILL_KEY=drilldummy\n' > "$FLEET_SECRETS_HOME/drillsite/drillsvc.env"
 
 # --- deploy against the SITE data -----------------------------------------
 o="$(FLEET_ROOT="$scratch/repo" PATH="$scratch/bin:$PATH" "$F" ops deploy --site drillsite drillsvc 2>&1)"

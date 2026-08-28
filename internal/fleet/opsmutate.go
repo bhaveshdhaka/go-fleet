@@ -278,7 +278,7 @@ func (oc *opsContext) deployOne(r *kubectlRunner, name string, svc map[string]an
 	tag := labImageTag(image)
 	fmt.Fprintf(oc.stdout, "== deploy %s (%s) ==\n", name, tag)
 
-	envFile := filepath.Join(oc.labRoot, "secrets", name+".env")
+	envFile := filepath.Join(oc.site.secretsDir(oc.p.Root), name+".env")
 	if _, err := os.Stat(envFile); err == nil {
 		if err := labEnsureSecret(r, ns, name+"-env", envFile); err != nil {
 			return err

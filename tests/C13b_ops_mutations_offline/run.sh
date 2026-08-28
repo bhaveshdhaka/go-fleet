@@ -14,6 +14,8 @@ source "$FLEET_ROOT/scripts/lib.sh"
 
 scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
+export FLEET_SECRETS_HOME="$scratch/secrets-home"
+mkdir -p "$FLEET_SECRETS_HOME"
 
 # fresh binary from the live source
 F="$(bash "$FLEET_ROOT/ci/build-fleet.sh" "$scratch/fleet-bin" >/dev/null; echo "$scratch/fleet-bin")"
@@ -25,7 +27,9 @@ tar -C "$FLEET_ROOT" --exclude=.git --exclude=.vm --exclude=dist -cf - . | tar -
 # lab fixture (routed services in fixture: alpha only -> 1 endpoint)
 mkdir -p "$scratch/lab"
 cp -r "$FLEET_ROOT/internal/fleet/testdata/labfix/." "$scratch/lab/"
-printf 'BETA_KEY=fixturedummy\n' > "$scratch/lab/secrets/beta.env"
+mkdir -p "$FLEET_SECRETS_HOME/drill"
+printf 'BETA_KEY=fixturedummy\n' > "$FLEET_SECRETS_HOME/drill/beta.env"
+printf 'DASHBOARD_SLUG=drilldash\n' > "$FLEET_SECRETS_HOME/drill/dashboard.env"
 : > "$scratch/lab/drill.kubeconfig"
 
 cat > "$scratch/repo/ops/SITES.yaml" <<EOF
@@ -155,7 +159,7 @@ assert_eq "deploy unknown rc=1" "1" "$rc"
 assert_contains "deploy unknown ERROR shape" "ERROR: service 'nonexistent' is not registered" "$o"
 # make beta REQUIRE a secret key so the two-phase check has teeth
 before=$(ls "$scratch/records" | grep -c '\.args$')
-mv "$scratch/lab/secrets/beta.env" "$scratch/beta.env.bak"
+mv "$FLEET_SECRETS_HOME/drill/beta.env" "$scratch/beta.env.bak"
 sed -i '/^  beta:/,/^  gamma:/ s/    secrets: \[\]/    secrets:\n    - BETA_KEY/' "$scratch/lab/config/registry.yaml"
 o="$(FLEET_ROOT="$scratch/repo" PATH="$scratch/bin:$PATH" "$F" ops deploy beta 2>&1)"
 rc=$?
@@ -164,7 +168,7 @@ assert_contains "two-phase secret check refuses BEFORE any kubectl" "missing fil
 assert_contains "secret check names the missing key" "BETA_KEY" "$o"
 after=$(ls "$scratch/records" | grep -c '\.args$')
 assert_eq "no kubectl calls on secret refusal" "$before" "$after"
-mv "$scratch/beta.env.bak" "$scratch/lab/secrets/beta.env"
+mv "$scratch/beta.env.bak" "$FLEET_SECRETS_HOME/drill/beta.env"
 sed -i '/^  beta:/,/^  gamma:/ { /^    - BETA_KEY$/d; s/^    secrets:$/    secrets: []/; }' "$scratch/lab/config/registry.yaml"
 o="$(FLEET_ROOT="$scratch/repo" PATH="$scratch/bin:$PATH" "$F" ops verify beta 2>&1)"
 assert_contains "verify hostless refusal" "service 'beta' has no public host" "$o"
