@@ -109,12 +109,15 @@ already executed):
 
 ## State
 
-- Done through WO-10: see HANDOVER.md (corpus 37 units / 463 asserts
-  green; arjun-hk built THROUGH the product — onboarded, contract-tested,
-  gated-promoted to prod, deployed via fleet ops to hk-03-dev, LIVE at
-  https://arjun.hk with DNS + monitoring; master checklist evidenced).
-- 2026-08-28: owner ACCEPTED the WO-10 delivery ("Ok this is good") and
-  directed documentation follow-up (WO-11: fresh Ubuntu install guide
-  covering opencode + openchamber, the no-drama path). Repo stays
-  private until the owner explicitly asks to flip it.
-- Next action: none mandatory. Extension ideas live with the owner.
+- **Completion program WO-14..WO-19 EXECUTED 2026-08-28** (owner
+  directive "no more sos lab, only go fleet"): secrets divorce (one
+  mechanism, outside the repo; BOOTSTRAP token STORED), fresh-install
+  path with LIVE CANARY PASS on hk-03-dev (kaniko build sha-pinned,
+  public HTTP 200, clean teardown, DNS/tunnel reconciled), rich
+  `ops register` (full runtime surface), `next` engine over the full
+  ship path with a golden replay unit (C17a), `--json` + documented
+  exit codes (C17c), product README + docs/{QUICKSTART,CONCEPTS,CLI}.md,
+  BOOTSTRAP openchamber project registration + first-agent-session
+  seeding, secrets audit (tree+history clean, C19a), release binaries.
+  Corpus 44 units / 550 asserts fail=0; check 6/6. Awaiting owner
+  acceptance of the delivery.

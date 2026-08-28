@@ -11,8 +11,8 @@
 | Item | State |
 |---|---|
 | Repo | `/home/openchamber/workspaces/fleet`, git clean, master; remote `origin` = github.com/bhaveshdhaka/go-fleet (**private**) |
-| Corpus | 37 units / 467 assertions, fail=0 skip=0 (`bash scripts/test.sh`); `fleet check` 6/6 PASS |
-| Program | `PLAN.md` completion program WO-14..WO-19 (owner directive "no more sos lab, only go fleet") — **WO-14 EXECUTED** |
+| Corpus | 44 units / 550 assertions, fail=0 skip=0 (`bash scripts/test.sh`); `fleet check` 6/6 PASS |
+| Program | `PLAN.md` completion program WO-14..WO-19 **EXECUTED** (owner directive "no more sos lab, only go fleet") — secrets divorce, fresh-install path, rich register + next-engine ship path, --json surface, onboarding docs, secrets audit + release |
 | CLI | Go core `cmd/fleet` (module github.com/bhaveshdhaka/go-fleet, `fleet 0.1.0`) behind thin shims `scripts/fleet` + `ci/promote.sh`; binary `dist/fleet` via `ci/build-fleet.sh` |
 | Enforcement | front-matter schema v1, predicates P1-P6, full `next` engine, `.fleet.yaml` actor policy (prod human-gated) |
 | Distribution | MIT LICENSE; `ci/build-release.sh` static linux/darwin + SHA256SUMS (C11a); install.sh installs `prefix/bin/fleet` (C11b); GH repo private |
@@ -52,12 +52,18 @@
 
 ## Next action
 
-**WO-15 — fresh-install path** (`site new`, `site tunnel create`, `infra
-deploy`, `site canary`, QEMU fresh-site scenario), per PLAN.md. WO-14
-delivered: secrets divorce + BOOTSTRAP token-storage fix; live drifts
-observed during verification (tunnel ingress arjun.hk; 1edge-mocks tag
-drift) are journaled and await owner direction — a `dns --apply` would
-heal the first.
+**Owner acceptance of the WO-14..WO-19 completion program.** Delivery
+highlights: secrets home (one mechanism, outside the repo, hk-03-dev
+migrated), BOOTSTRAP token STORAGE fix, fresh-install path
+(`site new`/`site tunnel create`/`infra deploy`/`site canary` — LIVE
+CANARY PASS on hk-03-dev with public HTTP 200 + clean teardown), rich
+`ops register` (full sos-lab runtime surface), `next` engine drives the
+entire ship path (C17a golden replay), `--json` + exit codes, product
+README + docs/{QUICKSTART,CONCEPTS,CLI}.md, openchamber project
+registration step in BOOTSTRAP, secrets audit (tree+history clean),
+release binaries built. Known open item (owner call, predates program):
+1edge-mocks deployed-intent tag drift — a `ops build/deploy 1edge-mocks`
+or a state acceptance heals it.
 
 ## Standing cautions
 
