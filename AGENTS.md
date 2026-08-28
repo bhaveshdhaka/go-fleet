@@ -14,8 +14,16 @@ Two-file rule of this repo:
     ./scripts/fleet next                   # READ-ONLY guidance: next legal action
     ./scripts/fleet check                  # READ-ONLY predicates P1-P6 report
     ./scripts/fleet site list              # READ-ONLY managed sites registry
+    ./scripts/fleet site init <name> --from <dir>
+                                           # migrate external site data into
+                                           # ops/sites/<name> + cutover SITES.yaml
+                                           # (MUTATES repo; secrets NOT copied)
     ./scripts/fleet ops <status|doctor>    # READ-ONLY site observation (sos-lab
                                            # parity; explicit access, zero mutations)
+    ./scripts/fleet ops register <name> --port N [--host H] [--image I|--repo D]
+                                           [--secret KEY]... [--env K=V]...
+                                           # register a service in the site
+                                           # registry (MUTATES; enabled: false)
     ./scripts/fleet ops build <svc> [--allow-dirty]
                                            # kaniko build (MUTATES cluster+state;
                                            # WO-8 dual-run with ./lab)

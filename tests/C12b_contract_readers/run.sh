@@ -70,11 +70,14 @@ printf 'ALPHA_KEY=real-value-never-read\n' > "$lab/secrets/alpha.env"
 : > "$scratch/kubeconfig"
 
 python3 - "$repo" "$lab" "$scratch" <<'EOF'
+import re
 import sys, pathlib
 repo, lab, scratch = sys.argv[1], sys.argv[2], sys.argv[3]
 p = pathlib.Path(repo, "ops/SITES.yaml")
-p.write_text(p.read_text().replace("lab_root: ../sos-lab", f"lab_root: {lab}")
-                          .replace("access: in-cluster", f"access: kubeconfig:{scratch}/kubeconfig"))
+t = re.sub(r"lab_root: .*", f"lab_root: {lab}", p.read_text(), count=1)
+t = re.sub(r"\n    access: .*", f"\n    access: kubeconfig:{scratch}/kubeconfig", t, count=1)
+t = re.sub(r"\n\s*secrets_dir: .*", "", t, count=1)
+p.write_text(t)
 EOF
 
 run() { PATH="$scratch/bin:$PATH" FLEET_ROOT="$repo" "$F" "$@" 2>&1; }

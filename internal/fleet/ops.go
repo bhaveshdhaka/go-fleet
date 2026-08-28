@@ -22,8 +22,9 @@ func cmdOps(args []string) int {
 	}
 	if sub != "status" && sub != "doctor" &&
 		sub != "build" && sub != "deploy" && sub != "rollback" &&
-		sub != "dns" && sub != "monitor" && sub != "remove" && sub != "verify" {
-		fmt.Fprintln(os.Stderr, "usage: fleet ops <status|doctor|build|deploy|rollback|dns|monitor|remove|verify> [--site NAME] [--json] [args]")
+		sub != "dns" && sub != "monitor" && sub != "remove" && sub != "verify" &&
+		sub != "register" {
+		fmt.Fprintln(os.Stderr, "usage: fleet ops <status|doctor|register|build|deploy|rollback|dns|monitor|remove|verify> [--site NAME] [--json] [args]")
 		return 2
 	}
 	rest := args[1:]
@@ -75,7 +76,7 @@ func cmdOps(args []string) int {
 	} else {
 		return failf("multiple sites registered; pass --site")
 	}
-	if site.Engine != "sos-lab" {
+	if !validSiteEngine(site.Engine) {
 		return failf("site '%s': engine '%s' not supported yet", site.Name, site.Engine)
 	}
 	if !validSiteAccess(site.Access) {
@@ -85,7 +86,7 @@ func cmdOps(args []string) int {
 	// mutation verbs resolve their own context (runner is created lazily —
 	// dns/verify never touch the cluster)
 	switch sub {
-	case "build", "deploy", "rollback", "dns", "monitor", "remove", "verify":
+	case "build", "deploy", "rollback", "dns", "monitor", "remove", "verify", "register":
 		oc, rc := resolveOpsContext(p, siteName)
 		if rc != 0 {
 			return rc
@@ -105,6 +106,8 @@ func cmdOps(args []string) int {
 			return opsRemove(oc, tail)
 		case "verify":
 			return opsVerify(oc, tail)
+		case "register":
+			return opsRegister(oc, tail)
 		}
 	}
 
@@ -255,7 +258,7 @@ func opsDoctor(lv *LabView, r *kubectlRunner, root string, jsonMode bool) int {
 	}
 
 	cfCfg := asMap(lv.Registry["cloudflare"])
-	token, tokenErr := LoadCloudflareToken(lv.Site.LabRootAbs(root))
+	token, tokenErr := LoadCloudflareToken(lv.Site.secretsDir(root))
 	if tokenErr != nil {
 		add("tunnel healthy", false, tokenErr.Error(), "")
 	} else {

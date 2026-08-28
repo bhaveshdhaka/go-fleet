@@ -585,8 +585,9 @@ func renderLabMonitorDocs(lv *LabView, root, slug string) ([]any, error) {
 // labDashboardSlug mirrors cli._dashboard_slug (DASHBOARD_SLUG from the
 // site's secrets/dashboard.env; the value is a URL path token, not a
 // credential — printed only in the dashboard URL like ./lab url does).
-func labDashboardSlug(labRoot string) (string, error) {
-	path := filepath.Join(labRoot, "secrets", "dashboard.env")
+// Takes the SITE SECRETS DIR (honoring the secrets_dir override).
+func labDashboardSlug(secretsDir string) (string, error) {
+	path := filepath.Join(secretsDir, "dashboard.env")
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("missing %s — create it with DASHBOARD_SLUG=<hex>", path)

@@ -61,12 +61,10 @@ data the binary validates, never prompts hoping an LLM behaves.
 
 ## State
 
-- Done through WO-8: see HANDOVER.md (corpus 33 units / 392 asserts green;
-  ops engine MUTATIONS live — build/deploy/rollback/dns/monitor/remove
-  dual-run with ./lab on hk-03-dev with identical results, evidenced by
-  normalized snapshot diffs; ZERO mutations before WO-8; canary fully
-  torn down; sos-lab remains authoritative until WO-9 migration).
-- Next action: execute WO-9 (site migration: fleet site init --from
-  sos-lab; hk-03-dev becomes fleet-managed; post-migration deploy +
-  rollback drill), then WO-10 (arjun.hk end-to-end → STOP for owner
+- Done through WO-9: see HANDOVER.md (corpus 35 units / 433 asserts
+  green; hk-03-dev is a fleet-managed site — engine: fleet, data in
+  ops/sites/hk-03-dev, secrets referenced not copied, history archived;
+  post-migration deploy v1→v2 + rollback drill verified live via fleet
+  alone; sos-lab frozen as archive at its post-WO-8 baseline).
+- Next action: execute WO-10 (arjun-hk end-to-end → STOP for owner
   acceptance).

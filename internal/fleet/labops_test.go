@@ -250,8 +250,9 @@ func TestRegistryEdits(t *testing.T) {
 	if err := labSetServiceEnabled(scratch, "beta", false); err != nil {
 		t.Fatalf("flip back: %v", err)
 	}
-	if err := labSetServiceEnabled(scratch, "nonexistent", true); err == nil {
-		t.Fatalf("expected refusal for unknown service")
+	if err := labSetServiceEnabled(scratch, "nonexistent", true); err == nil ||
+		!strings.Contains(err.Error(), "not registered") {
+		t.Fatalf("unknown service must be refused as 'not registered', got: %v", err)
 	}
 
 	// line-level check: flip rewrote exactly one line
@@ -273,8 +274,9 @@ func TestRegistryEdits(t *testing.T) {
 	if _, ok := lv2.LabServices()["alpha"]; !ok {
 		t.Fatalf("alpha must survive gamma removal")
 	}
-	if err := labRemoveService(scratch, "gamma"); err == nil {
-		t.Fatalf("expected refusal removing absent service")
+	if err := labRemoveService(scratch, "gamma"); err == nil ||
+		!strings.Contains(err.Error(), "not registered") {
+		t.Fatalf("absent service must be refused as 'not registered', got: %v", err)
 	}
 }
 
@@ -456,5 +458,30 @@ services:
 	}
 	if asString(svc["env"].(map[string]any)["KUBECONFIG"]) != "" {
 		t.Fatalf("KUBECONFIG should be empty string")
+	}
+}
+
+// TestSecretsDirOverride guards the WO-9 reference-not-copy contract: the
+// slug and CF-token readers resolve through the site secrets_dir override
+// exactly once (no doubled "secrets" segment).
+func TestSecretsDirOverride(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "cloudflare.env"), []byte("CF_API_TOKEN=x\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "dashboard.env"), []byte("DASHBOARD_SLUG=abc\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	tok, err := LoadCloudflareToken(dir)
+	if err != nil || tok != "x" {
+		t.Fatalf("cf token: %q %v", tok, err)
+	}
+	slug, err := labDashboardSlug(dir)
+	if err != nil || slug != "abc" {
+		t.Fatalf("slug: %q %v", slug, err)
+	}
+	missing := filepath.Join(dir, "secrets")
+	if _, err := LoadCloudflareToken(missing); err == nil {
+		t.Fatal("missing secrets dir must error")
 	}
 }

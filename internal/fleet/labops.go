@@ -155,6 +155,7 @@ func removeLabStateEntry(labRoot, file, service string) error {
 // non-empty, non-comment line with indent <= 2. Trailing comment lines
 // attached to the block are included.
 func labServiceBlock(lines []string, name string) (start, end int, ok bool) {
+	start = -1
 	for i, ln := range lines {
 		if strings.TrimRight(ln, " ") == "  "+name+":" {
 			start = i
@@ -489,7 +490,12 @@ func labStream(r *kubectlRunner, args ...string) error {
 
 // --- build path helpers (cli._resolve_repo_path + git checks) -----------
 
-func labResolveRepoPath(labRoot, repo string) (string, error) {
+// labResolveRepoPath resolves a repo field to a sibling of the FLEET
+// root — i.e. under the /workspace hostPath root (dirname(FLEET_ROOT) IS
+// the workspace mount for this deployment). Identical to labctl's
+// dirname(engine-repo) semantics for the sos-lab layout and correct for
+// fleet-managed sites whose lab_root sits deep inside the repo.
+func labResolveRepoPath(fleetRoot, repo string) (string, error) {
 	if strings.HasPrefix(repo, "http://") || strings.HasPrefix(repo, "https://") ||
 		strings.HasPrefix(repo, "git@") {
 		return "", fmt.Errorf(
@@ -497,12 +503,23 @@ func labResolveRepoPath(labRoot, repo string) (string, error) {
 	}
 	name := strings.TrimPrefix(repo, "../")
 	name = strings.TrimPrefix(name, "/")
-	path := filepath.Join(filepath.Dir(labRoot), name)
+	path := filepath.Join(filepath.Dir(fleetRoot), name)
 	st, err := os.Stat(path)
 	if err != nil || !st.IsDir() {
 		return "", fmt.Errorf("repo directory not found: %s", path)
 	}
 	return path, nil
+}
+
+// labWorkspaceHostPath renders a directory under the workspace root as
+// the path kaniko pods see (hostPath /workspace == dirname(FLEET_ROOT)).
+func labWorkspaceHostPath(fleetRoot, dir string) (string, error) {
+	ws := filepath.Dir(fleetRoot)
+	rel, err := filepath.Rel(ws, dir)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return "", fmt.Errorf("%s is not under the workspace root %s", dir, ws)
+	}
+	return "/workspace/" + filepath.ToSlash(rel), nil
 }
 
 func labGitSha(path string) string {

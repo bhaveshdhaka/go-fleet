@@ -247,11 +247,11 @@ func joinNames(items []any) string {
 	return strings.Join(out, ", ")
 }
 
-// LoadCloudflareToken mirrors cloudflare.load_token: CF_API_TOKEN from the
-// site's secrets/cloudflare.env. The token never leaves this function
-// except to the HTTP client.
-func LoadCloudflareToken(labRoot string) (string, error) {
-	path := filepath.Join(labRoot, "secrets", "cloudflare.env")
+// LoadCloudflareToken mirrors cloudflare.load_token: CF_API_TOKEN from
+// the site's secrets dir (honoring the secrets_dir override). The token
+// never leaves this function except to the HTTP client.
+func LoadCloudflareToken(secretsDir string) (string, error) {
+	path := filepath.Join(secretsDir, "cloudflare.env")
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("missing %s", path)

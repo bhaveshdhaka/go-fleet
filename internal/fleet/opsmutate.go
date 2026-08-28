@@ -48,7 +48,7 @@ func resolveOpsContext(p Paths, siteName string) (*opsContext, int) {
 	} else {
 		return nil, failf("multiple sites registered; pass --site")
 	}
-	if site.Engine != "sos-lab" {
+	if !validSiteEngine(site.Engine) {
 		return nil, failf("site '%s': engine '%s' not supported yet", site.Name, site.Engine)
 	}
 	if !validSiteAccess(site.Access) {
@@ -114,7 +114,7 @@ func opsBuild(oc *opsContext, args []string) int {
 	if repo == "" {
 		return opError(fmt.Errorf("service '%s' has no repo — it uses a prebuilt image", name))
 	}
-	path, err := labResolveRepoPath(oc.labRoot, repo)
+	path, err := labResolveRepoPath(oc.p.Root, repo)
 	if err != nil {
 		return opError(err)
 	}
@@ -179,7 +179,10 @@ func opsBuild(oc *opsContext, args []string) int {
 			return opError(err)
 		}
 		fmt.Fprintf(oc.stdout, "-- base image ready: %s\n", baseDest)
-		overlayCtx := "/workspace/" + filepath.Base(oc.labRoot) + "/images/" + name
+		overlayCtx, err := labWorkspaceHostPath(oc.p.Root, filepath.Join(oc.labRoot, "images", name))
+		if err != nil {
+			return opError(err)
+		}
 		finalImage = fmt.Sprintf("%s/%s:%s", LabRegistryHost, name, tag)
 		extra := []string{
 			"--build-arg=BASE_IMAGE=" + baseDest,
@@ -290,7 +293,7 @@ func (oc *opsContext) deployOne(r *kubectlRunner, name string, svc map[string]an
 		if zone == "" {
 			return fmt.Errorf("no zone in registry covers %s", host)
 		}
-		token, err := LoadCloudflareToken(oc.labRoot)
+		token, err := LoadCloudflareToken(oc.site.secretsDir(oc.p.Root))
 		if err != nil {
 			return err
 		}
@@ -299,19 +302,33 @@ func (oc *opsContext) deployOne(r *kubectlRunner, name string, svc map[string]an
 			return err
 		}
 		fmt.Fprintf(oc.stdout, "dns: %s\n", msg)
-		cf := asMap(oc.lv.Registry["cloudflare"])
-		if err := PutTunnelConfig(token, asString(cf["account_id"]), asString(cf["tunnel_id"]),
-			renderLabTunnelIngress(oc.lv)); err != nil {
-			return err
-		}
-		fmt.Fprintln(oc.stdout, "tunnel ingress synced")
 	}
 	if !asBool(svc["enabled"]) {
 		if err := labSetServiceEnabled(oc.labRoot, name, true); err != nil {
 			return err
 		}
 	}
-	gitSha := stateEntry(oc.lv.Builds, name, "git_sha")
+	// deviation #3 (WO-9): re-render the tunnel from the UPDATED registry
+	// so a newly deployed host is routable immediately — lab PUTs before
+	// the flip and relies on a separate `dns --apply` afterwards.
+	fresh, err := LoadLabView(oc.site, oc.p.Root)
+	if err != nil {
+		return err
+	}
+	oc.lv = fresh
+	if host := asString(svc["host"]); host != "" {
+		token, err := LoadCloudflareToken(oc.site.secretsDir(oc.p.Root))
+		if err != nil {
+			return err
+		}
+		cf := asMap(fresh.Registry["cloudflare"])
+		if err := PutTunnelConfig(token, asString(cf["account_id"]), asString(cf["tunnel_id"]),
+			renderLabTunnelIngress(fresh)); err != nil {
+			return err
+		}
+		fmt.Fprintln(oc.stdout, "tunnel ingress synced")
+	}
+	gitSha := stateEntry(fresh.Builds, name, "git_sha")
 	if _, err := recordLabDeploy(oc.labRoot, name, tag, image, gitSha, time.Now()); err != nil {
 		return err
 	}
@@ -374,7 +391,7 @@ func opsDNS(oc *opsContext, args []string, jsonMode bool) int {
 		return opError(fmt.Errorf("ops dns does not support --json"))
 	}
 	routed := oc.lv.RoutedServices()
-	token, err := LoadCloudflareToken(oc.labRoot)
+	token, err := LoadCloudflareToken(oc.site.secretsDir(oc.p.Root))
 	if err != nil {
 		return opError(err)
 	}
@@ -473,9 +490,14 @@ func opsMonitor(oc *opsContext, args []string) int {
 	return 0
 }
 
-// opsMonitorInner mirrors cli.cmd_monitor (shared with deploy).
+// opsMonitorInner mirrors cli.cmd_monitor (shared with deploy). Like
+// labctl, it re-reads the registry and state fresh so flipped services
+// and new deploys are reflected.
 func opsMonitorInner(oc *opsContext, r *kubectlRunner) error {
-	slug, err := labDashboardSlug(oc.labRoot)
+	if fresh, err := LoadLabView(oc.site, oc.p.Root); err == nil {
+		oc.lv = fresh
+	}
+	slug, err := labDashboardSlug(oc.site.secretsDir(oc.p.Root))
 	if err != nil {
 		return err
 	}
@@ -555,7 +577,7 @@ func opsRemove(oc *opsContext, args []string) int {
 		if err != nil {
 			return opError(err)
 		}
-		token, err := LoadCloudflareToken(oc.labRoot)
+		token, err := LoadCloudflareToken(oc.site.secretsDir(oc.p.Root))
 		if err != nil {
 			return opError(err)
 		}
@@ -688,4 +710,145 @@ func atoiStrict(s string) (int, bool) {
 		n = n*10 + int(s[i]-'0')
 	}
 	return n, true
+}
+
+// --- ops register --------------------------------------------------------
+
+// opsRegister mirrors labctl add_service: appends a canonical service
+// block to the SITE registry (enabled: false by default) and validates by
+// re-parse. WO-9: needed for the post-migration drill and WO-10
+// onboarding. The projects.*.services display list is not maintained
+// (nothing in the engine reads it).
+func opsRegister(oc *opsContext, args []string) int {
+	name := ""
+	host, image, repo, dockerfile := "", "", "", ""
+	port := 0
+	ns := oc.site.Namespace
+	var secrets []string
+	var envPairs []string
+	expectVal := false
+	prevFlag := ""
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if expectVal {
+			expectVal = false
+			switch prevFlag {
+			case "--host":
+				host = a
+			case "--port":
+				n, ok := atoiStrict(a)
+				if !ok || n <= 0 || n > 65535 {
+					return opError(fmt.Errorf("--port must be an integer 1-65535"))
+				}
+				port = n
+			case "--namespace":
+				ns = a
+			case "--image":
+				image = a
+			case "--repo":
+				repo = a
+			case "--dockerfile":
+				dockerfile = a
+			case "--secret":
+				secrets = append(secrets, a)
+			case "--env":
+				if !strings.Contains(a, "=") {
+					return opError(fmt.Errorf("--env must be KEY=value"))
+				}
+				envPairs = append(envPairs, a)
+			}
+			continue
+		}
+		switch a {
+		case "--host", "--port", "--namespace", "--image", "--repo", "--dockerfile", "--secret", "--env":
+			expectVal = true
+			prevFlag = a
+			continue
+		}
+		switch {
+		case strings.HasPrefix(a, "--"):
+			return opError(fmt.Errorf("unknown flag %q for ops register", a))
+		default:
+			if name != "" {
+				return opError(fmt.Errorf("ops register takes exactly one name"))
+			}
+			name = a
+		}
+	}
+	if name == "" || port == 0 {
+		return opError(fmt.Errorf(
+			"usage: fleet ops register <name> --port <1-65535> [--host H] [--namespace NS] [--image IMG|--repo DIR] [--secret KEY]... [--env K=V]..."))
+	}
+	if !siteNameRe.MatchString(name) {
+		return opError(fmt.Errorf("service name must match %s", siteNameRe.String()))
+	}
+	if oc.lv.LabServices()[name] != nil {
+		return opError(fmt.Errorf("service '%s' is already registered", name))
+	}
+	if image == "" && repo == "" {
+		return opError(fmt.Errorf("service '%s': needs --image or --repo", name))
+	}
+	if err := labRegistryAppendService(oc.labRoot, name, host, port, ns, image, repo, dockerfile, secrets, envPairs); err != nil {
+		return opError(err)
+	}
+	fmt.Fprintf(oc.stdout, "registered %s\n", name)
+	fmt.Fprintf(oc.stdout, "next: fill %s if needed, then ./scripts/fleet ops deploy %s\n",
+		filepath.Join(oc.site.secretsDir(oc.p.Root), name+".env"), name)
+	return 0
+}
+
+// labRegistryAppendService appends a canonical service block at the end
+// of the site registry (the services section is the last section of the
+// file in our contracts), then re-validates.
+func labRegistryAppendService(labRoot, name, host string, port int, ns, image, repo, dockerfile string, secrets, envPairs []string) error {
+	path := filepath.Join(labRoot, "config", "registry.yaml")
+	lines, err := readLines(path)
+	if err != nil {
+		return err
+	}
+	// refuse if the name is already present as a block
+	if _, _, ok := labServiceBlock(lines, name); ok {
+		return fmt.Errorf("service '%s' is already registered in %s", name, path)
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "  %s:\n", name)
+	fmt.Fprintf(&b, "    namespace: %s\n", ns)
+	fmt.Fprintf(&b, "    port: %d\n", port)
+	fmt.Fprintf(&b, "    enabled: false\n")
+	if host != "" {
+		fmt.Fprintf(&b, "    host: %s\n", host)
+	}
+	if image != "" {
+		fmt.Fprintf(&b, "    image: %s\n", image)
+	}
+	if repo != "" {
+		fmt.Fprintf(&b, "    repo: %s\n", repo)
+	}
+	if dockerfile != "" {
+		fmt.Fprintf(&b, "    dockerfile: %s\n", dockerfile)
+	}
+	if len(secrets) > 0 {
+		b.WriteString("    secrets:\n")
+		for _, k := range secrets {
+			fmt.Fprintf(&b, "    - %s\n", k)
+		}
+	}
+	if len(envPairs) > 0 {
+		b.WriteString("    env:\n")
+		for _, kv := range envPairs {
+			parts := strings.SplitN(kv, "=", 2)
+			fmt.Fprintf(&b, "      %s: %s\n", parts[0], parts[1])
+		}
+	}
+	out := append(append([]string{}, lines...), strings.Split(strings.TrimSuffix(b.String(), "\n"), "\n")...)
+	return labRegistryRewrite(labRoot, out, func(reg map[string]any) error {
+		svc := asMap(asMap(reg["services"])[name])
+		if svc == nil {
+			return fmt.Errorf("service '%s' missing after registration", name)
+		}
+		if asInt(svc["port"]) != port {
+			return fmt.Errorf("service '%s': port did not persist", name)
+		}
+		return nil
+	})
 }

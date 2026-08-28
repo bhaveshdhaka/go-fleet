@@ -10,8 +10,9 @@ sites_version: 1
 sites:
 
   - name: hk-03-dev
-    engine: sos-lab
-    lab_root: ../sos-lab
+    engine: fleet
+    lab_root: ops/sites/hk-03-dev
     namespace: sos-lab
     access: in-cluster
-    description: the real lab host (single-node k3s); sos-lab stays authoritative until WO-8 dual-run parity
+    secrets_dir: ../sos-lab/secrets
+    description: fleet-managed site (migrated 2026-08-28T01:14:56Z)

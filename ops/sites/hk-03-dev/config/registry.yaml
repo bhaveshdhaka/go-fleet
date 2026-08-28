@@ -1,0 +1,186 @@
+cloudflare:
+  account_id: f04fa041640e4096493366f32948663a
+  tunnel_id: b4ac6032-166a-4060-a8eb-b2a6d0d61604
+  tunnel_name: sos-lab
+domains:
+  bhavesh.hk:
+    zone_id: 49d72a4ea4425dacaa3a76e91e044388
+    purpose: personal + infra
+  1ed.ge:
+    zone_id: bd8a4f5c0869d9168d06ce5f3740e116
+    purpose: trading journal
+  arjun.hk:
+    zone_id: 161e5b456b03c86419bb6e026da130aa
+    purpose: son's site
+projects:
+  sos-lab:
+    repo: .
+    description: devops engine, observability, streaming stack
+    services:
+    - sos-dashboard
+    - openchamber
+    - aiostreams
+    - nzbdav
+    - usenetstreamer
+    principles:
+      lab_only_deploys: "All deploys flow through ./lab \u2014 never hand-modify a\
+        \ running service."
+      registry_is_intent: config/registry.yaml is the single source of deployment
+        intent.
+      state_is_truth: state/ is runtime truth, written only by ./lab.
+      secrets_stay_local: "Secret values live only in secrets/*.env \u2014 never in\
+        \ git, logs, or the registry."
+      doctor_before_trust: Trust nothing until ./lab doctor reports zero drift. Doctor
+        never mutates.
+      day_versioning: Tags are date-stamped (YYYY.MM.DD-rHHMMSS); every build traces
+        to its minute and git SHA.
+  1ed-ge:
+    repo: 1ed-ge
+    description: "public trading journal at 1ed.ge \u2014 Astro 5 SSR, admin at /zen\
+      \ (passkey)"
+    services:
+    - 1edge
+    - 1edge-mocks
+services:
+  openchamber:
+    repo: openchamber
+    pin: 52ee878669867d5cc415f7da7bda1808d51fdf5d
+    host: oc.bhavesh.hk
+    port: 3000
+    namespace: sos-lab
+    enabled: true
+    storage:
+      size: 10Gi
+    mounts:
+    - sub: config
+      path: /home/openchamber/.config/openchamber
+    - sub: oc-share
+      path: /home/openchamber/.local/share/opencode
+    - sub: oc-state
+      path: /home/openchamber/.local/state/opencode
+    - sub: oc-config
+      path: /home/openchamber/.config/opencode
+    - sub: ssh
+      path: /home/openchamber/.ssh
+    - sub: oc-tools
+      path: /home/openchamber/.npm-global
+    - host: /workspace
+      path: /home/openchamber/workspaces
+    serviceAccount: openchamber
+    args: ["openchamber", "serve", "--foreground"]
+    # 1Gi default OOM-killed the pod during in-app opencode upgrades
+    # (npm install spike on top of ~750Mi steady-state; 2026-08-25).
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 50m
+      limits:
+        memory: 5Gi
+    # Declared-vs-runtime env facts (doctor execs these in the pod).
+    # Chromium libs are baked in images/openchamber/Dockerfile — required
+    # by 1ed-ge docs/design gate.sh. If this fails: ./lab rebuild openchamber.
+    parity:
+      - >-
+        for l in libglib-2.0.so.0 libnss3.so libnspr4.so libdbus-1.so.3
+        libatk-1.0.so.0 libatk-bridge-2.0.so.0 libcups.so.2 libdrm.so.2
+        libxkbcommon.so.0 libatspi.so.0 libXcomposite.so.1 libXdamage.so.1
+        libXfixes.so.3 libXrandr.so.2 libgbm.so.1 libpango-1.0.so.0
+        libcairo.so.2 libasound.so.2 libX11.so.6 libXext.so.6; do
+        [ -e "/usr/lib/x86_64-linux-gnu/$l" ] || { echo "missing $l"; exit 1; }; done
+    env:
+      KUBECONFIG: ""
+    secrets:
+    - OPENCHAMBER_UI_PASSWORD
+  sos-dashboard:
+    image: nginx:alpine
+    host: sos-lab.bhavesh.hk
+    port: 80
+    namespace: sos-lab
+    enabled: true
+    secrets: []
+  aiostreams:
+    image: ghcr.io/viren070/aiostreams:latest
+    host: aio.bhavesh.hk
+    port: 3000
+    namespace: sos-lab
+    enabled: true
+    env:
+      BASE_URL: https://aio.bhavesh.hk
+      DATABASE_URI: sqlite://./data/db.sqlite
+    secrets:
+    - SECRET_KEY
+    - AIOSTREAMS_AUTH
+    storage:
+      size: 5Gi
+      mount: /app/data
+    resources:
+      requests:
+        memory: 256Mi
+      limits:
+        memory: 3Gi
+  nzbdav:
+    image: nzbdav/nzbdav:latest
+    host: dav.bhavesh.hk
+    port: 3000
+    namespace: sos-lab
+    enabled: true
+    secrets: []
+    probePath: /health
+    storage:
+      size: 10Gi
+      mount: /config
+    resources:
+      requests:
+        memory: 512Mi
+      limits:
+        memory: 4Gi
+  usenetstreamer:
+    image: ghcr.io/sanket9225/usenetstreamer:latest
+    host: usenet.bhavesh.hk
+    port: 7000
+    namespace: sos-lab
+    enabled: true
+    env:
+      ADDON_BASE_URL: https://usenet.bhavesh.hk
+      CONFIG_DIR: /data/config
+    secrets:
+    - ADDON_SHARED_SECRET
+    - ADDON_STREAM_TOKEN
+    storage:
+      size: 2Gi
+      mount: /data/config
+    resources:
+      requests:
+        memory: 256Mi
+      limits:
+        memory: 2Gi
+  1edge:
+    namespace: sos-lab
+    port: 4321
+    enabled: true
+    host: 1ed.ge
+    repo: 1ed-ge
+    probePath: /health
+    runAsUser: 0
+    secrets:
+    - ADMIN_SECRET
+    env:
+      SITE_ENV: prod
+      SITE_URL: https://1ed.ge
+      DATA_PATH: /srv/1edge/content
+      MEDIA_PATH: /srv/1edge/media
+      DATA_DIR: /srv/1edge/data
+    storage:
+      size: 5Gi
+      mount: /srv/1edge
+  1edge-mocks:
+    namespace: sos-lab
+    port: 80
+    enabled: true
+    host: mock.1ed.ge
+    repo: 1ed-ge
+    dockerfile: design/mocks.Dockerfile
+    probePath: /health
+    storage:
+      size: 1Gi
+      mount: /data

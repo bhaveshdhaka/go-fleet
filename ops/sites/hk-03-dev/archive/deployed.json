@@ -1,0 +1,41 @@
+{
+  "1edge": {
+    "deployed_at": "2026-08-24T02:11:45Z",
+    "git_sha": "3ab9aadca40ff38328f03a01faf11b11992f1b84",
+    "image": "docker-registry.sos-lab.svc.cluster.local:5000/1edge:2026.08.24-r020944",
+    "node": "hk-03-dev",
+    "tag": "2026.08.24-r020944"
+  },
+  "1edge-mocks": {
+    "deployed_at": "2026-08-25T13:20:33Z",
+    "git_sha": "e9afeb7d3e1ac6b4402835ecbdffdd152376e57d",
+    "image": "docker-registry.sos-lab.svc.cluster.local:5000/1edge-mocks:2026.08.25-r131956",
+    "node": "hk-03-dev",
+    "tag": "2026.08.25-r131956"
+  },
+  "aiostreams": {
+    "deployed_at": "2026-08-23T11:11:49Z",
+    "image": "ghcr.io/viren070/aiostreams:latest",
+    "node": "hk-03-dev",
+    "tag": "latest"
+  },
+  "nzbdav": {
+    "deployed_at": "2026-08-23T11:08:13Z",
+    "image": "nzbdav/nzbdav:latest",
+    "node": "hk-03-dev",
+    "tag": "latest"
+  },
+  "openchamber": {
+    "deployed_at": "2026-08-25T05:52:15Z",
+    "git_sha": "52ee878669867d5cc415f7da7bda1808d51fdf5d",
+    "image": "docker-registry.sos-lab.svc.cluster.local:5000/openchamber:2026.08.25-r054247",
+    "node": "hk-03-dev",
+    "tag": "2026.08.25-r054247"
+  },
+  "usenetstreamer": {
+    "deployed_at": "2026-08-23T11:13:11Z",
+    "image": "ghcr.io/sanket9225/usenetstreamer:latest",
+    "node": "hk-03-dev",
+    "tag": "latest"
+  }
+}

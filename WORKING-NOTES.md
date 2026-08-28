@@ -7,15 +7,13 @@
 
 ## Where the program is
 
-WO-4 (Go core), WO-5 (enforcement), WO-6 (distribution), WO-7 (read-only
-ops parity), WO-8 (ops MUTATIONS, dual-run PASSED with identical results)
-are all EXECUTED and committed. Next: **WO-9 site migration** → WO-10
-arjun.hk (then delete this file). WO-8 notes worth keeping until then:
-lab deploys of disabled services rewrite the registry pyyaml-style
-(parser regression TestMiniYamlPyyamlStyle covers it); lab deploy PUTs
-the tunnel pre-flip (new host routes at next dns --apply — mirrored);
-./lab status crashes on null git_sha; lab remove leaves state residue
-(fleet's remove cleans it, journaled deviations #1/#2 in WO-8.md).
+WO-4..WO-9 all EXECUTED (Go core, enforcement, distribution, read-only
+parity, mutations dual-run, site migration — hk-03-dev is fleet-managed
+with secrets referenced at ../sos-lab/secrets). Next: **WO-10 arjun.hk**
+(then delete this file). For WO-10: arjun.hk zone_id already in the site
+registry domains; `ops register` + `ops deploy` self-reconcile DNS/tunnel;
+fleet init/onboard provide the SDLC side; the prod-stage promote needs an
+approval file with an allowed actor (see .fleet.yaml)
 
 ## Environment facts (each one cost time to discover)
 

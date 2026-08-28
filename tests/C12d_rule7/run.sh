@@ -64,10 +64,12 @@ fi
 
 # 2. kubeconfig site with missing file -> named error
 python3 - "$repo" "$scratch" <<'EOF'
+import re
 import sys, pathlib
 repo, scratch = sys.argv[1], sys.argv[2]
 p = pathlib.Path(repo, "ops/SITES.yaml")
-p.write_text(p.read_text().replace("access: in-cluster", f"access: kubeconfig:{scratch}/missing/kubeconfig"))
+t = re.sub(r"\n    access: .*", f"\n    access: kubeconfig:{scratch}/missing/kubeconfig", p.read_text(), count=1)
+p.write_text(re.sub(r"\n\s*secrets_dir: .*", "", t, count=1))
 EOF
 o="$(FLEET_ROOT="$repo" "$F" ops status 2>&1)"; rc=$?
 { [[ $rc -eq 1 && "$o" == *"kubeconfig missing"* ]]; } \
@@ -75,10 +77,12 @@ o="$(FLEET_ROOT="$repo" "$F" ops status 2>&1)"; rc=$?
 
 # 3. unknown site refused
 python3 - "$repo" "$scratch" <<'EOF'
+import re
 import sys, pathlib
 repo, scratch = sys.argv[1], sys.argv[2]
 p = pathlib.Path(repo, "ops/SITES.yaml")
-p.write_text(p.read_text().replace(f"access: kubeconfig:{scratch}/missing/kubeconfig", "access: in-cluster"))
+t2 = re.sub(r"\n    access: .*", "\n    access: in-cluster", p.read_text(), count=1)
+p.write_text(re.sub(r"\n\s*secrets_dir: .*", "", t2, count=1))
 EOF
 o="$(FLEET_ROOT="$repo" "$F" ops status --site ghost 2>&1)"; rc=$?
 { [[ $rc -eq 1 && "$o" == *"unknown site 'ghost'"* ]]; } \

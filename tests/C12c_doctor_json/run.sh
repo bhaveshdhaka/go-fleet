@@ -54,10 +54,14 @@ printf '{"alpha": {"tag": "t2", "git_sha": "ffffffffffffffff", "built_at": "2026
 : > "$scratch/kubeconfig"
 
 python3 - "$repo" "$lab" "$scratch" <<'EOF'
+import re
 import sys, pathlib
 repo, lab, scratch = sys.argv[1], sys.argv[2], sys.argv[3]
 p = pathlib.Path(repo, "ops/SITES.yaml")
-p.write_text(p.read_text().replace("lab_root: ../sos-lab", f"lab_root: {lab}").replace("access: in-cluster", f"access: kubeconfig:{scratch}/kubeconfig"))
+t = re.sub(r"\n    lab_root: .*", f"\n    lab_root: {lab}", p.read_text(), count=1)
+t = re.sub(r"\n    access: .*", f"\n    access: kubeconfig:{scratch}/kubeconfig", t, count=1)
+t = re.sub(r"\n\s*secrets_dir: .*", "", t, count=1)
+p.write_text(t)
 EOF
 
 PATH="$scratch/bin:$PATH" FLEET_ROOT="$repo" "$F" ops doctor --json > "$scratch/doctor.json" 2>&1

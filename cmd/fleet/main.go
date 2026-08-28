@@ -25,10 +25,13 @@ const helpText = `fleet <command>
   init [dir]                             scaffold the SDLC file skeleton
   onboard <component>                    register component (registry+pipeline+state)
   site list                              managed sites registry (read-only)
+  site init <name> --from <lab_root>     migrate an external site to
+                                         fleet-managed data (MUTATES; WO-9)
   ops <status|doctor>                    site observation, sos-lab parity (read-only)
+  ops register <name> [flags]            # register a service in the site registry
   ops <build|deploy|rollback|dns|monitor|remove|verify>
-                                         site operations, sos-lab parity (WO-8;
-                                         mutations dual-run with ./lab)
+                                         site operations (mutations; WO-8
+                                         dual-run PASSED, WO-9 fleet-managed)
   approve <component> <dev|prod> [who]   write approval file + journal
   promote <component> <to-stage> [...]   gated stage transition
   verify [units...]                      run the test corpus, journal the result

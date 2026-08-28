@@ -17,6 +17,11 @@ type Site struct {
 	Namespace   string
 	Access      string
 	Description string
+	// SecretsDir optionally overrides where the site engine keeps its
+	// gitignored secret env files. Set by site init so a migrated site can
+	// reference the predecessor's secrets WITHOUT copying them (WO-9:
+	// "secrets untouched").
+	SecretsDir string
 }
 
 func validSiteAccess(a string) bool {
@@ -58,6 +63,8 @@ func LoadSites(p Paths) ([]Site, error) {
 			cur.Access = val
 		case "description":
 			cur.Description = strings.Trim(val, `"`)
+		case "secrets_dir":
+			cur.SecretsDir = val
 		}
 	}
 	if cur != nil {
@@ -106,8 +113,11 @@ func cmdSite(args []string) int {
 	if len(args) > 0 {
 		sub = args[0]
 	}
+	if sub == "init" {
+		return cmdSiteInit(args[1:])
+	}
 	if sub != "list" && sub != "" {
-		return failf("unknown site subcommand '%s' (list)", sub)
+		return failf("unknown site subcommand '%s' (list|init)", sub)
 	}
 	sites, err := LoadSites(p)
 	if err != nil {
@@ -126,7 +136,15 @@ func cmdSite(args []string) int {
 }
 
 // siteSecretsDir is where the site engine keeps its gitignored secret env
-// files (sos-lab layout: <lab_root>/secrets).
+// files: the secrets_dir override when declared (migrated sites reference
+// the predecessor's gitignored dir — values are never copied), otherwise
+// <lab_root>/secrets.
 func (s Site) secretsDir(root string) string {
+	if s.SecretsDir != "" {
+		if filepath.IsAbs(s.SecretsDir) {
+			return s.SecretsDir
+		}
+		return filepath.Join(root, s.SecretsDir)
+	}
 	return filepath.Join(s.LabRootAbs(root), "secrets")
 }
