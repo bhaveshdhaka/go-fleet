@@ -13,11 +13,16 @@ USER root
 # fleet ops resolve it from pod sessions too.
 RUN chmod 755 /root
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libglib2.0-0 libnss3 libnspr4 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 \
+    curl libglib2.0-0 libnss3 libnspr4 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 \
     libcups2 libdrm2 libxkbcommon0 libatspi2.0-0 libxcomposite1 libxdamage1 \
     libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2 \
     libx11-6 libxext6 \
     && rm -rf /var/lib/apt/lists/*
+# kubectl pinned to TOOLCHAIN_KUBECTL_VERSION — fleet ops shells out to it;
+# pod sessions get the same binary the host toolchain pins.
+RUN curl -fsSL -o /usr/local/bin/kubectl \
+      https://dl.k8s.io/release/v1.36.3/bin/linux/amd64/kubectl \
+    && chmod +x /usr/local/bin/kubectl && kubectl version --client=true
 
 # System-level CLI install: the oc-tools PVC mounts OVER
 # /home/openchamber/.npm-global, so a user-prefix install is shadowed on
