@@ -1,52 +1,52 @@
 {
   "1edge": {
-    "deployed_at": "2026-08-24T02:11:45Z",
-    "git_sha": "3ab9aadca40ff38328f03a01faf11b11992f1b84",
-    "image": "docker-registry.sos-lab.svc.cluster.local:5000/1edge:2026.08.24-r020944",
+    "deployed_at": "2026-08-29T12:07:32Z",
+    "git_sha": "74dd4c7ce6ceb4b4d628eaf0053f2d30286e798c",
+    "image": "docker-registry.fleet.svc.cluster.local:5000/1edge:2026.08.29-r120017",
     "node": "hk-03-dev",
-    "tag": "2026.08.24-r020944"
+    "tag": "2026.08.29-r120017"
   },
   "1edge-mocks": {
-    "deployed_at": "2026-08-28T14:38:18Z",
+    "deployed_at": "2026-08-29T12:08:31Z",
     "git_sha": "74dd4c7ce6ceb4b4d628eaf0053f2d30286e798c",
-    "image": "docker-registry.sos-lab.svc.cluster.local:5000/1edge-mocks:2026.08.28-r143723",
+    "image": "docker-registry.fleet.svc.cluster.local:5000/1edge-mocks:2026.08.29-r120745",
     "node": "hk-03-dev",
-    "tag": "2026.08.28-r143723"
+    "tag": "2026.08.29-r120745"
   },
   "aiostreams": {
-    "deployed_at": "2026-08-23T11:11:49Z",
+    "deployed_at": "2026-08-29T10:40:03Z",
     "image": "ghcr.io/viren070/aiostreams:latest",
     "node": "hk-03-dev",
     "tag": "latest"
   },
   "arjun-hk": {
-    "deployed_at": "2026-08-28T02:11:39Z",
-    "git_sha": "022cd8455ba2c824207b591c9f91f1228cf947c3",
-    "image": "docker-registry.sos-lab.svc.cluster.local:5000/arjun-hk:2026.08.28-r021046",
+    "deployed_at": "2026-08-29T12:06:29Z",
+    "git_sha": "994dba0eb91e41f5ce599b66c993dc90cba9b939",
+    "image": "docker-registry.fleet.svc.cluster.local:5000/arjun-hk:2026.08.29-r115657",
     "node": "hk-03-dev",
-    "tag": "2026.08.28-r021046"
+    "tag": "2026.08.29-r115657"
   },
   "nzbdav": {
-    "deployed_at": "2026-08-23T11:08:13Z",
+    "deployed_at": "2026-08-29T10:40:30Z",
     "image": "nzbdav/nzbdav:latest",
     "node": "hk-03-dev",
     "tag": "latest"
   },
   "openchamber": {
-    "deployed_at": "2026-08-25T05:52:15Z",
+    "deployed_at": "2026-08-29T11:47:36Z",
     "git_sha": "52ee878669867d5cc415f7da7bda1808d51fdf5d",
-    "image": "docker-registry.sos-lab.svc.cluster.local:5000/openchamber:2026.08.25-r054247",
+    "image": "docker-registry.fleet.svc.cluster.local:5000/openchamber:2026.08.29-r112313",
     "node": "hk-03-dev",
-    "tag": "2026.08.25-r054247"
+    "tag": "2026.08.29-r112313"
   },
   "sos-dashboard": {
-    "deployed_at": "2026-08-29T10:14:59Z",
+    "deployed_at": "2026-08-29T10:29:22Z",
     "image": "nginx:alpine",
     "node": "hk-03-dev",
     "tag": "alpine"
   },
   "usenetstreamer": {
-    "deployed_at": "2026-08-23T11:13:11Z",
+    "deployed_at": "2026-08-29T10:40:56Z",
     "image": "ghcr.io/sanket9225/usenetstreamer:latest",
     "node": "hk-03-dev",
     "tag": "latest"

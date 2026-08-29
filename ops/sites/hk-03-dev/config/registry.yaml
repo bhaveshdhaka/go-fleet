@@ -63,8 +63,6 @@ services:
       path: /home/openchamber/.config/opencode
     - sub: ssh
       path: /home/openchamber/.ssh
-    - sub: oc-tools
-      path: /home/openchamber/.npm-global
     - host: /workspace
       path: /home/openchamber/workspaces
     serviceAccount: openchamber
@@ -187,10 +185,10 @@ services:
       mount: /data
   arjun-hk:
     namespace: fleet
-    port: 8080
+    port: 80
     enabled: true
     host: arjun.hk
-    repo: fleet/apps/arjun-hk
+    repo: arjun.hk
 
   dashboard-render:
     namespace: fleet

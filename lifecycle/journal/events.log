@@ -134,3 +134,10 @@ ts=2026-08-29T09:18:19Z event=approved component=fleethub stage=prod actor=owner
 ts=2026-08-29T09:18:29Z event=promoted component=fleethub from=stage to=prod actor=agent
 # restore-secrets wo= site=hk-03-dev snapshot=latest files=9
 # site-tunnel-create wo= site=hk-03-dev tunnel_id=50e0d13b-d404-4a3d-b4bf-27c373bf97e0 tunnel_name=hk-03-dev-tunnel domain=bhavesh.hk zone_recorded=true token_stored=tunnel.env
+# infra-deploy wo= site=hk-03-dev applied=3
+# restore wo= site=hk-03-dev service=aiostreams snapshot=latest
+# restore wo= site=hk-03-dev service=nzbdav snapshot=latest
+# restore wo= site=hk-03-dev service=usenetstreamer snapshot=latest
+# ops-update wo= site=hk-03-dev service=arjun-hk keys=repo
+# restore wo= site=hk-03-dev service=1edge snapshot=latest
+# restore wo= site=hk-03-dev service=1edge-mocks snapshot=latest
