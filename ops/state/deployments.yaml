@@ -12,8 +12,8 @@ components:
     note: fresh checkout baseline
 
   - name: fleethub
-    stage: built
-    last_promoted_at: ""
+    stage: prod
+    last_promoted_at: "2026-08-29T09:18:29Z"
     note: registered ahead of C6 delivery
 
   - name: arjun-hk

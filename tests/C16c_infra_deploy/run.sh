@@ -18,7 +18,10 @@ F="$(bash "$FLEET_ROOT/ci/build-fleet.sh" "$scratch/fleet-bin" >/dev/null; echo 
 mkdir -p "$scratch/repo"
 tar -C "$FLEET_ROOT" --exclude=.git --exclude=.vm --exclude=dist -cf - . | tar -C "$scratch/repo" -xf -
 
-o="$(FLEET_ROOT="$scratch/repo" "$F" site new drillsite --domain example.test 2>&1)"
+# --access kubeconfig:... (rule 7): drills run on plain hosts where the
+# in-cluster default can never resolve — declare site-declared access
+# like C17a/C17b (stub kubeconfig written before the deploy below)
+o="$(FLEET_ROOT="$scratch/repo" "$F" site new drillsite --domain example.test --access kubeconfig:drill.kubeconfig 2>&1)"
 rc=$?
 assert_eq "site new rc" "0" "$rc"
 
@@ -51,6 +54,10 @@ case "$*" in
 esac
 FAKE
 chmod +x "$scratch/bin/kubectl"
+# stub kubeconfig the declared access points at (the fake kubectl never
+# reads it — the runner only stats the path, rule 7)
+printf 'apiVersion: v1\nkind: Config\nclusters:\n- name: drill\n  cluster:\n    server: https://127.0.0.1:6443\nusers:\n- name: drill\n  user:\n    token: drill-token\ncontexts:\n- name: drill\n  context:\n    cluster: drill\n    user: drill\ncurrent-context: drill\n' \
+  > "$scratch/repo/ops/sites/drillsite/drill.kubeconfig"
 
 o="$(FLEET_ROOT="$scratch/repo" PATH="$scratch/bin:$PATH" "$F" infra deploy --site drillsite 2>&1)"
 rc=$?

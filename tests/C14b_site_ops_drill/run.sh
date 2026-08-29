@@ -25,6 +25,16 @@ cp -r "$FLEET_ROOT/internal/fleet/testdata/labfix/." "$scratch/fixture/"
 o="$(FLEET_ROOT="$scratch/repo" "$F" site init drillsite --from "$scratch/fixture" 2>&1)"
 rc=$?
 assert_eq "migration rc" "0" "$rc"
+
+# Hermetic access (rule 7): site init defaults a fresh entry to
+# access: in-cluster, which only resolves inside a pod (serviceaccount
+# env + files). Drills run on plain hosts — declare kubeconfig access
+# for the drill site exactly like C17a/C17b, pointing at a stub
+# kubeconfig (the recording fake kubectl never reads it).
+printf 'apiVersion: v1\nkind: Config\nclusters:\n- name: drill\n  cluster:\n    server: https://127.0.0.1:6443\nusers:\n- name: drill\n  user:\n    token: drill-token\ncontexts:\n- name: drill\n  context:\n    cluster: drill\n    user: drill\ncurrent-context: drill\n' \
+  > "$scratch/repo/ops/sites/drillsite/drill.kubeconfig"
+sed -i 's/^    access: in-cluster$/    access: kubeconfig:drill.kubeconfig/' "$scratch/repo/ops/SITES.yaml"
+
 cp "$scratch/repo/ops/sites/drillsite/config/registry.yaml" "$scratch/registry-baseline.yaml"
 cp "$scratch/repo/ops/sites/drillsite/state/deployed.json" "$scratch/state-baseline.json"
 
@@ -74,6 +84,9 @@ assert_contains "image-or-repo refused" "needs --image or --repo" "$o"
 # (secrets home, name-scoped per site — WO-14)
 mkdir -p "$FLEET_SECRETS_HOME/drillsite"
 printf 'DRILL_KEY=drilldummy\n' > "$FLEET_SECRETS_HOME/drillsite/drillsvc.env"
+# monitor re-render (deploy tail step) reads the dashboard slug from the
+# site secrets home — same seeding discipline as C13b/C17a/C17b
+printf 'DASHBOARD_SLUG=drilldash\n' > "$FLEET_SECRETS_HOME/drillsite/dashboard.env"
 
 # --- deploy against the SITE data -----------------------------------------
 o="$(FLEET_ROOT="$scratch/repo" PATH="$scratch/bin:$PATH" "$F" ops deploy --site drillsite drillsvc 2>&1)"

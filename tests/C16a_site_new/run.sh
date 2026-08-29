@@ -33,7 +33,10 @@ grep -q "SITE NEW PLAN site=drillsite" "$scratch/plan1.txt" \
   || report_pass "dry-run writes nothing"
 
 # --- mutating run -----------------------------------------------------------
-o="$(FLEET_ROOT="$scratch/repo" "$F" site new drillsite --domain example.test 2>&1)"
+# --access kubeconfig:... (rule 7): the in-cluster default only resolves
+# inside a pod; drills run on plain hosts, so the scaffold declares
+# site-declared kubeconfig access exactly like C17a/C17b do.
+o="$(FLEET_ROOT="$scratch/repo" "$F" site new drillsite --domain example.test --access kubeconfig:drill.kubeconfig 2>&1)"
 rc=$?
 assert_eq "site new rc" "0" "$rc"
 assert_contains "site new contract line" "SITE NEW site=drillsite" "$o"
@@ -76,6 +79,10 @@ case "$*" in
 esac
 FAKE
 chmod +x "$scratch/bin/kubectl"
+# stub kubeconfig the declared access points at (the fake kubectl never
+# reads it — the runner only stats the path, rule 7)
+printf 'apiVersion: v1\nkind: Config\nclusters:\n- name: drill\n  cluster:\n    server: https://127.0.0.1:6443\nusers:\n- name: drill\n  user:\n    token: drill-token\ncontexts:\n- name: drill\n  context:\n    cluster: drill\n    user: drill\ncurrent-context: drill\n' \
+  > "$scratch/repo/ops/sites/drillsite/drill.kubeconfig"
 o="$(FLEET_ROOT="$scratch/repo" PATH="$scratch/bin:$PATH" "$F" ops status --site drillsite 2>&1)"
 rc=$?
 assert_eq "ops status on fresh site rc" "0" "$rc"

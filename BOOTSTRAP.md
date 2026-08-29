@@ -61,7 +61,7 @@ Confirm Ubuntu 22.04/24.04 and x86_64/arm64 (report which).
 - Install node 22 runtime: NodeSource
   (`curl -fsSL https://deb.nodesource.com/setup_22.x | bash -` then
   `apt install -y nodejs`).
-- Verify: `bun --version` and `node --version` (expect bun 1.3.x,
+- Verify: `bun --version` and `node --version` (expect bun ≥ 1.4,
   node v22.x).
 
 ### Step 2 — opencode present
@@ -73,10 +73,20 @@ The human already installed opencode and connected a provider. Verify
   `openssl rand -base64 18` and show it once).
 - Install: `curl -fsSL https://raw.githubusercontent.com/openchamber/openchamber/main/scripts/install.sh | bash`
   (it will detect bun — let it).
-- Configure and persist:
-  `openchamber --ui-password '<the password>'`,
-  `openchamber startup enable`, `loginctl enable-linger root`.
-- Verify: `openchamber status` shows the server on 127.0.0.1:3000, and
+- Configure and persist — TWO supervisors exist and only one may win:
+  `openchamber --ui-password '<the password>'` starts a standalone
+  daemon, `openchamber startup enable` installs a systemd USER unit.
+  The CLI flag only affects the daemon in memory; the unit reads
+  `~/.config/openchamber/startup.env`. So:
+  1. `openchamber startup enable` and `loginctl enable-linger root`.
+  2. Make sure the line `OPENCHAMBER_UI_PASSWORD=<the password>` exists
+     in `~/.config/openchamber/startup.env` (mode 0600) — append it if
+     missing; without it a reboot brings the UI up PASSWORDLESS.
+  3. Stop the standalone daemon (`openchamber stop`) and let the user
+     unit own the service: `systemctl --user restart openchamber`.
+  Two processes fighting over port 3000 = one of them crash-looping.
+- Verify: `systemctl --user is-active openchamber` is `active`,
+  `openchamber status` shows `password: yes`, and
   `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000` returns
   a 2xx/3xx.
 
@@ -92,9 +102,12 @@ Verify: `cloudflared --version`.
    token. Confirm the full hostname back to me before you touch
    anything.
 2. Using the token as `Authorization: Bearer` header (variable only):
-   - `GET https://api.cloudflare.com/client/v4/accounts` → take the
-     account id.
-   - `GET /zones?name=<domain>` → take the zone id.
+   - `GET https://api.cloudflare.com/client/v4/user/tokens/verify` →
+     expect `success: true, status: active` before anything else.
+   - `GET /zones?name=<domain>` → take the zone id AND the account id
+     from `result[0].account.id`. A zone-scoped token often returns an
+     EMPTY list from `GET /accounts` — do not treat that as failure;
+     the zone object carries the account id.
    - `POST /accounts/<acct>/cfd_tunnel` body
      `{"name":"<hostname>","config_src":"cloudflare"}` → capture
      `result.id` and `result.token`. If `token` is absent from the
@@ -104,7 +117,10 @@ Verify: `cloudflared --version`.
    - CNAME `<hostname>` → `<tunnel-id>.cfargotunnel.com` (proxied): first
      `GET /zones/<zid>/dns_records?type=CNAME&name=<hostname>`; create if
      absent, `PUT` retarget if it points somewhere else, no-op if
-     already correct.
+     already correct. ALWAYS create the NEW tunnel and retarget — if an
+     old tunnel with a different name owns the hostname (or a shared
+     tunnel serves OTHER hostnames), never reconfigure that tunnel's
+     ingress; overwriting it takes other sites down.
 3. Install the service so it survives reboots:
    `cloudflared service install <tunnel-token>` (token goes only into
    the systemd unit this creates — that is expected and fine).
@@ -128,26 +144,46 @@ Verify: `cloudflared --version`.
 ```bash
 mkdir -p ~/workspaces && cd ~/workspaces
 git clone https://github.com/bhaveshdhaka/go-fleet fleet
-cd fleet && ./install.sh
+cd fleet && ./install.sh --json | grep FLEET_INSTALL_OK
 bash scripts/test.sh
 ./scripts/fleet check
 ./scripts/fleet doctor && ./scripts/fleet next
 ```
-Success criteria: `./install.sh` prints a line containing
-`FLEET_INSTALL_OK`; `scripts/test.sh` prints `FLEET SUMMARY ... fail=0`;
-`fleet check` prints `CHECK SUMMARY ... pass=6 fail=0`. Show me those
-three lines. Do not run any mutating fleet command beyond this
+Success criteria: the install line `FLEET_INSTALL_OK prefix=...` (the
+machine contract prints in `--json` mode); `scripts/test.sh` prints
+`FLEET SUMMARY units_run=46 pass=... fail=0` — `skip=1` is EXPECTED on
+a host with no cluster yet (the C4a kubectl tier skips honestly instead
+of false-greening; a pod or k3s host runs it for real); `fleet check`
+prints `CHECK SUMMARY ... pass=6 fail=0`. Show me those three lines.
+If this box IS the fleet lab host, also seed the backup secrets now —
+RESTORE.md §3 (`r2.env`: R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
+RESTIC_PASSWORD into `~/.fleet/secrets/<site>/r2.env`, mode 0600) —
+secrets-first is the restore-day law; then prove the password:
+`FLEET_RESTIC_BIN=.toolchain/bin/restic` + `restic snapshots` against
+`s3:https://<account>.r2.cloudflarestorage.com/<bucket>/<site>` must
+list snapshots with rc=0 (repo path = registry `backup:` bucket + site).
+Do not run any mutating fleet command beyond this
 (`init`/`onboard`/`promote` come later, when I ask for a project).
 
 ### Step 7 — openchamber project + the first agent session
 1. Register the fleet repo as an openchamber project so it appears in
-   the UI (openchamber CLI/config — detect the installed openchamber and
-   add the project pointing at `~/workspaces/fleet`; verify it lists).
+   the UI. Mechanics: openchamber keeps projects in the `projects`
+   array of `~/.config/openchamber/settings.json`; each entry is
+   `{id: "path_<unpadded-base64-of-path>", path: "/root/workspaces/fleet",
+   label: "fleet", addedAt: <ms>}` (copy the shape of an existing
+   entry). Verify with `openchamber projects --json` — the path must
+   list. (`openchamber session create --dir <path>` also works and
+   registers implicitly.)
 2. Seed the FIRST agent session for that project with exactly this
    brief: "Read AGENTS.md and follow it. Run
    `./scripts/fleet next` and do what it says; never improvise around a
    refusal. Report what you find and stop." (Verify the session was
    created; do not run fleet mutations yourself here.)
+   Expected outcome — this is SUCCESS, not a failure: the session
+   drives `next` through the ship path (promote dev → approve dev →
+   promote stage) and then REFUSES at `approve prod` because the actor
+   policy (.fleet.yaml) reserves prod for human owners. It reports and
+   goes idle. That refusal is the evidence the gate works.
 3. Confirm to me: fleet is a project in openchamber, the first session
    exists, and the human never needs to run fleet commands by hand.
 
@@ -175,8 +211,11 @@ three lines. Do not run any mutating fleet command beyond this
 
 ### Step 6b — k3s (restore-day path)
 If this box will host the fleet site: install the pinned k3s per
-`scripts/blocks/01-k3s.sh`, write the kubeconfig, and verify
-`kubectl get nodes` Ready before continuing.
+`scripts/blocks/01-k3s.sh` (the script maps the kubectl pin to the k3s
+fork tag `v<pin>+k3s1` — k3s releases carry that suffix; a bare tag 404s
+on get.k3s.io), write the kubeconfig to `/root/.kube/fleet.kubeconfig`
+(0600), and verify `kubectl get nodes` Ready with kubeletVersion
+`v<pin>+k3s1` before continuing.
 
 ### Step 6c — python deny (deterministic)
 Append to the GLOBAL opencode config (~/.config/opencode/opencode.jsonc):

@@ -142,6 +142,10 @@ run_unit() {
   (
     cd "$unit_dir" || exit 3
     export CHUNK="$unit" FLEET_ROOT RESULT_DIR="$result_dir"
+    # hermetic toolchain: units resolve pinned go/binary tools from the
+    # repo prefix, never from the operator's ambient PATH (same
+    # discipline as the private HOME passed to kubectl children)
+    export PATH="$FLEET_ROOT/.toolchain/bin:$PATH"
     # secrets home seam (WO-14): every unit resolves site secrets inside
     # its own result dir — nothing reads the operator's $HOME
     export FLEET_SECRETS_HOME="$result_dir/secrets-home"

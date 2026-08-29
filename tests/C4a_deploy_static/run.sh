@@ -33,22 +33,30 @@ done
 assert_eq "dry-run byte-identical" "$dry1" "$dry2"
 assert_not_file "dry-run writes nothing" "$scratch/probe"
 
-# ── real client-side validation of every manifest (no cluster) ─────────────
-if command -v kubectl >/dev/null 2>&1; then
-  while IFS= read -r mf; do
-    base="$(basename "$mf")"
-    out="$(kubectl apply --dry-run=client -f "$mf" 2>&1)"
-    rc=$?
-    if [[ $rc -eq 0 ]]; then
-      report_pass "kubectl validates $base"
-    else
-      report_fail "kubectl validates $base" "rc=$rc :: $(printf '%s' "$out" | tail -1)"
-    fi
-  done < <(manifest_files "$INFRA")
+# ── real client-side validation of every manifest ──────────────────────────
+count="$(manifest_files "$INFRA" | wc -l | tr -d ' ')"
+assert_eq "three manifests present" 3 "$count"
 
-  # three manifests exactly, deterministic order
-  count="$(manifest_files "$INFRA" | wc -l | tr -d ' ')"
-  assert_eq "three manifests present" 3 "$count"
+if command -v kubectl >/dev/null 2>&1; then
+  # kubectl 1.36 contacts the API server even for --dry-run=client
+  # (openapi + RESTMapper discovery) — there is no fully offline
+  # validation path. The tier is honest about it: validate for real
+  # when an API server answers, SKIP (never false-green) on offline
+  # hosts — same discipline as the no-kubectl tier below.
+  if kubectl get --raw=/readyz >/dev/null 2>&1; then
+    while IFS= read -r mf; do
+      base="$(basename "$mf")"
+      out="$(kubectl apply --dry-run=client -f "$mf" 2>&1)"
+      rc=$?
+      if [[ $rc -eq 0 ]]; then
+        report_pass "kubectl validates $base"
+      else
+        report_fail "kubectl validates $base" "rc=$rc :: $(printf '%s' "$out" | tail -1)"
+      fi
+    done < <(manifest_files "$INFRA")
+  else
+    report_skip "kubectl validates manifests" "no cluster API reachable (offline host)"
+  fi
 else
   report_skip "kubectl validates manifests" "no kubectl binary on PATH"
 fi

@@ -45,8 +45,12 @@ bring_up_k3s() {
   fi
 
   mkdir -p "$state_dir"
-  echo "[k3s] installing k3s v$want ..."
-  curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="v${want}" sh -
+  # k3s releases are the Kubernetes pin plus the fork suffix (kubectl
+  # v1.36.3 -> k3s tag v1.36.3+k3s1); the bare tag 404s on get.k3s.io.
+  # The kubelet then reports v<want>+k3s1 — the convention the VM drill
+  # asserts (test-onvm.sh phase 4).
+  echo "[k3s] installing k3s v$want+k3s1 ..."
+  curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="v${want}+k3s1" sh -
 
   echo "[k3s] waiting for node Ready ..."
   local i=0
