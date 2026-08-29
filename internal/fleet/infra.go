@@ -81,6 +81,16 @@ func cmdInfra(args []string) int {
 	}
 	defer cleanup()
 
+	// fresh-cluster guard: every site template assumes the site
+	// namespace exists; on a brand-new k3s node it does not. Idempotent
+	// scaffolding — get first, create only when missing.
+	if out, rc := runner.Run("get", "namespace", site.Namespace); rc != 0 {
+		out2, rc2 := runner.Run("create", "namespace", site.Namespace)
+		if rc2 != 0 {
+			return failf("ensure namespace %s: %s %s", site.Namespace, strings.TrimSpace(out), strings.TrimSpace(out2))
+		}
+	}
+
 	templatesDir := filepath.Join(site.LabRootAbs(p.Root), "templates")
 	order := []struct {
 		file       string
@@ -96,11 +106,35 @@ func cmdInfra(args []string) int {
 		if _, err := os.Stat(path); err != nil {
 			continue
 		}
-		// cloudflared needs its token secret before the deployment lands
+		// cloudflared needs its token secret before the deployment lands.
+		// tunnel.env stores the value as TUNNEL_TOKEN= (site tunnel create)
+		// while the template's secretKeyRef reads key "token" — stage a
+		// mapped env file so the secret carries the key the pod wants.
 		if o.deployment == "cloudflared" {
 			tunnelEnv := filepath.Join(site.secretsDir(p.Root), "tunnel.env")
 			if _, err := os.Stat(tunnelEnv); err == nil {
-				if err := labEnsureSecret(runner, site.Namespace, "cloudflared-token", tunnelEnv); err != nil {
+				raw, err := os.ReadFile(tunnelEnv)
+				if err != nil {
+					return failf("%v", err)
+				}
+				tok := ""
+				for _, line := range strings.Split(string(raw), "\n") {
+					if v, ok := strings.CutPrefix(line, "TUNNEL_TOKEN="); ok {
+						tok = strings.TrimSpace(v)
+					}
+				}
+				if tok == "" {
+					return failf("tunnel.env has no TUNNEL_TOKEN= line")
+				}
+				mapped, err := os.CreateTemp("", "fleet-tunnel-token-*.env")
+				if err != nil {
+					return failf("%v", err)
+				}
+				defer os.Remove(mapped.Name())
+				if err := os.WriteFile(mapped.Name(), []byte("token="+tok+"\n"), 0o600); err != nil {
+					return failf("%v", err)
+				}
+				if err := labEnsureSecret(runner, site.Namespace, "cloudflared-token", mapped.Name()); err != nil {
 					return failf("%v", err)
 				}
 			} else {

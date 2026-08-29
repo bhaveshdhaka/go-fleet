@@ -88,7 +88,10 @@ func runSiteTunnelCreate(p Paths, site Site, domain string) error {
 		return err
 	}
 
-	// 1. resolve the account (cloudflareAPI returns the unwrapped result)
+	// 1. resolve the account (cloudflareAPI returns the unwrapped result).
+	// Zone-scoped tokens list NO accounts — the zone object carries the
+	// account id, so resolve from the zone when /accounts comes back
+	// empty (the common case for the bootstrap token's scope).
 	accRes, err := cloudflareAPI(token, "GET", "/accounts")
 	if err != nil {
 		return err
@@ -97,10 +100,26 @@ func runSiteTunnelCreate(p Paths, site Site, domain string) error {
 		ID   string `json:"id"`
 		Name string `json:"name"`
 	}
-	if err := json.Unmarshal(accRes, &accounts); err != nil || len(accounts) == 0 {
-		return fmt.Errorf("CF /accounts returned no usable account")
+	_ = json.Unmarshal(accRes, &accounts)
+	accountID := ""
+	if len(accounts) > 0 {
+		accountID = accounts[0].ID
 	}
-	accountID := accounts[0].ID
+	if accountID == "" {
+		zRes, err := cloudflareAPI(token, "GET", "/zones?name="+domain)
+		if err != nil {
+			return err
+		}
+		var zones []struct {
+			Account struct {
+				ID string `json:"id"`
+			} `json:"account"`
+		}
+		if err := json.Unmarshal(zRes, &zones); err != nil || len(zones) == 0 || zones[0].Account.ID == "" {
+			return fmt.Errorf("CF: no account from /accounts and no account on zone %s — check token scopes", domain)
+		}
+		accountID = zones[0].Account.ID
+	}
 
 	// 2. create the tunnel
 	tunRes, err := cloudflareAPIBody(token, "POST",

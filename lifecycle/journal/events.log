@@ -132,3 +132,5 @@ ts=2026-08-29T06:05:45Z event=promoted component=fleethub from=dev to=stage acto
 # evidence: corpus 46u fail=0 (574 pass, 1 honest skip C4a cluster tier); check pass=6 fail=0; doctor OK; restic snapshots rc=0 (9 snapshots, R2 hk-03-backup/hk-03-dev); k3s node hk-03-dev Ready v1.36.3+k3s1; oc.bhavesh.hk -> 200 via new tunnel 472ae004 (CNAME retargeted from sos-lab, shared tunnels untouched); fleet registered in openchamber + first session ses_fb3e090d ran brief, halted at prod human gate (actor policy held)
 ts=2026-08-29T09:18:19Z event=approved component=fleethub stage=prod actor=owner-via-agent
 ts=2026-08-29T09:18:29Z event=promoted component=fleethub from=stage to=prod actor=agent
+# restore-secrets wo= site=hk-03-dev snapshot=latest files=9
+# site-tunnel-create wo= site=hk-03-dev tunnel_id=50e0d13b-d404-4a3d-b4bf-27c373bf97e0 tunnel_name=hk-03-dev-tunnel domain=bhavesh.hk zone_recorded=true token_stored=tunnel.env

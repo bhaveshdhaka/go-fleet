@@ -177,7 +177,7 @@ func opsBuild(oc *opsContext, args []string) int {
 
 	var finalImage string
 	if labOverlayDir(oc.labRoot, name) {
-		baseDest := fmt.Sprintf("%s/%s-base:%s", LabRegistryHost, name, tag)
+		baseDest := fmt.Sprintf("%s/%s-base:%s", labRegistryHost(oc.site.Namespace), name, tag)
 		if err := submit("build-"+name+"-"+compact, srcCtx, baseDest, nil, "Dockerfile"); err != nil {
 			return opError(err)
 		}
@@ -186,7 +186,7 @@ func opsBuild(oc *opsContext, args []string) int {
 		if err != nil {
 			return opError(err)
 		}
-		finalImage = fmt.Sprintf("%s/%s:%s", LabRegistryHost, name, tag)
+		finalImage = fmt.Sprintf("%s/%s:%s", labRegistryHost(oc.site.Namespace), name, tag)
 		extra := []string{
 			"--build-arg=BASE_IMAGE=" + baseDest,
 			"--build-arg=KUBE_VERSION=" + LabKubeVersion,
@@ -196,7 +196,7 @@ func opsBuild(oc *opsContext, args []string) int {
 			return opError(err)
 		}
 	} else {
-		finalImage = fmt.Sprintf("%s/%s:%s", LabRegistryHost, name, tag)
+		finalImage = fmt.Sprintf("%s/%s:%s", labRegistryHost(oc.site.Namespace), name, tag)
 		dockerfile := orStr(svc["dockerfile"], "Dockerfile")
 		if err := submit("build-"+name+"-"+compact, srcCtx, finalImage, nil, dockerfile); err != nil {
 			return opError(err)

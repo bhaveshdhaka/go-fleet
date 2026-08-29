@@ -14,8 +14,14 @@ import (
 // state/builds.json, and secret-file KEY-NAME checks. Secret VALUES are
 // never read into memory beyond the line being inspected for the key name.
 
+// LabRegistryHost was the hardcoded sos-lab-era registry URL; the host
+// now follows the SITE NAMESPACE (docker-registry.<ns>.svc.cluster.local)
+// so fresh sites in their own namespace resolve the in-cluster registry.
+func labRegistryHost(ns string) string {
+	return "docker-registry." + ns + ".svc.cluster.local:5000"
+}
+
 const (
-	LabRegistryHost = "docker-registry.sos-lab.svc.cluster.local:5000"
 	LabKanikoImage  = "gcr.io/kaniko-project/executor:v1.23.2"
 	LabKubeVersion  = "v1.36.3" // labctl KUBE_VERSION (overlay build-arg)
 )

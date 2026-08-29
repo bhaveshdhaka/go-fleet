@@ -379,7 +379,7 @@ func opsDoctor(lv *LabView, r *kubectlRunner, root string, jsonMode bool) int {
 		want := stateEntry(lv.Deployed, entryName, "image")
 		if want == "" {
 			if tag := stateEntry(lv.Deployed, entryName, "tag"); tag != "" {
-				want = LabRegistryHost + "/" + entryName + ":" + tag
+				want = labRegistryHost(ns) + "/" + entryName + ":" + tag
 			}
 		}
 		live := r.DeploymentImage(ns, entryName)

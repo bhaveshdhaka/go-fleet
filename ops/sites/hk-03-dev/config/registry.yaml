@@ -1,7 +1,7 @@
 cloudflare:
   account_id: f04fa041640e4096493366f32948663a
-  tunnel_id: b4ac6032-166a-4060-a8eb-b2a6d0d61604
-  tunnel_name: sos-lab
+  tunnel_id: 50e0d13b-d404-4a3d-b4bf-27c373bf97e0
+  tunnel_name: hk-03-dev-tunnel
 domains:
   bhavesh.hk:
     zone_id: 49d72a4ea4425dacaa3a76e91e044388
@@ -13,7 +13,7 @@ domains:
     zone_id: 161e5b456b03c86419bb6e026da130aa
     purpose: son's site
 projects:
-  sos-lab:
+  go-fleet:
     repo: .
     description: devops engine, observability, streaming stack
     services:
@@ -47,7 +47,7 @@ services:
     pin: 52ee878669867d5cc415f7da7bda1808d51fdf5d
     host: oc.bhavesh.hk
     port: 3000
-    namespace: sos-lab
+    namespace: fleet
     enabled: true
     critical: true
     storage:
@@ -94,16 +94,16 @@ services:
     - OPENCHAMBER_UI_PASSWORD
   sos-dashboard:
     image: nginx:alpine
-    host: sos-lab.bhavesh.hk
+    host: dashboard.bhavesh.hk
     port: 80
-    namespace: sos-lab
+    namespace: fleet
     enabled: true
     secrets: []
   aiostreams:
     image: ghcr.io/viren070/aiostreams:latest
     host: aio.bhavesh.hk
     port: 3000
-    namespace: sos-lab
+    namespace: fleet
     enabled: true
     env:
       BASE_URL: https://aio.bhavesh.hk
@@ -123,7 +123,7 @@ services:
     image: nzbdav/nzbdav:latest
     host: dav.bhavesh.hk
     port: 3000
-    namespace: sos-lab
+    namespace: fleet
     enabled: true
     secrets: []
     probePath: /health
@@ -139,7 +139,7 @@ services:
     image: ghcr.io/sanket9225/usenetstreamer:latest
     host: usenet.bhavesh.hk
     port: 7000
-    namespace: sos-lab
+    namespace: fleet
     enabled: true
     env:
       ADDON_BASE_URL: https://usenet.bhavesh.hk
@@ -156,7 +156,7 @@ services:
       limits:
         memory: 2Gi
   1edge:
-    namespace: sos-lab
+    namespace: fleet
     port: 4321
     enabled: true
     host: 1ed.ge
@@ -175,7 +175,7 @@ services:
       size: 5Gi
       mount: /srv/1edge
   1edge-mocks:
-    namespace: sos-lab
+    namespace: fleet
     port: 80
     enabled: true
     host: mock.1ed.ge
@@ -186,14 +186,14 @@ services:
       size: 1Gi
       mount: /data
   arjun-hk:
-    namespace: sos-lab
+    namespace: fleet
     port: 8080
     enabled: true
     host: arjun.hk
     repo: fleet/apps/arjun-hk
 
   dashboard-render:
-    namespace: sos-lab
+    namespace: fleet
     port: 9090
     enabled: false
     repo: fleet/apps/dashboard-render

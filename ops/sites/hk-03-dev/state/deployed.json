@@ -39,6 +39,12 @@
     "node": "hk-03-dev",
     "tag": "2026.08.25-r054247"
   },
+  "sos-dashboard": {
+    "deployed_at": "2026-08-29T10:14:59Z",
+    "image": "nginx:alpine",
+    "node": "hk-03-dev",
+    "tag": "alpine"
+  },
   "usenetstreamer": {
     "deployed_at": "2026-08-23T11:13:11Z",
     "image": "ghcr.io/sanket9225/usenetstreamer:latest",

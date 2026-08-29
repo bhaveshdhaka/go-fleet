@@ -425,7 +425,7 @@ func labServiceImage(lv *LabView, name string, svc map[string]any) (string, erro
 	if tag == "" {
 		return "", fmt.Errorf("no build recorded for '%s' — run: ./lab build %s", name, name)
 	}
-	return LabRegistryHost + "/" + name + ":" + tag, nil
+	return labRegistryHost(lv.Site.Namespace) + "/" + name + ":" + tag, nil
 }
 
 // renderLabTunnelIngress mirrors k8s.tunnel_ingress_from_registry.
@@ -467,7 +467,10 @@ func renderLabMonitorDocs(lv *LabView, root, slug string) ([]any, error) {
 		}
 	}
 	projects := asMap(lv.Registry["projects"])
-	proj := asMap(projects["sos-lab"])
+	proj := asMap(projects["go-fleet"])
+	if proj == nil {
+		proj = asMap(projects["sos-lab"])
+	}
 	principles := asMap(proj["principles"])
 	if principles == nil {
 		principles = map[string]any{}
@@ -574,9 +577,9 @@ func renderLabMonitorDocs(lv *LabView, root, slug string) ([]any, error) {
 func rendererImage(lv *LabView) string {
 	tag := asString(asMap(lv.Builds["dashboard-render"])["tag"])
 	if tag == "" {
-		return "docker-registry.sos-lab.svc.cluster.local:5000/dashboard-render:latest"
+		return labRegistryHost(lv.Site.Namespace) + "/dashboard-render:latest"
 	}
-	return "docker-registry.sos-lab.svc.cluster.local:5000/dashboard-render:" + tag
+	return labRegistryHost(lv.Site.Namespace) + "/dashboard-render:" + tag
 }
 
 // labDashboardSlug mirrors cli._dashboard_slug (DASHBOARD_SLUG from the

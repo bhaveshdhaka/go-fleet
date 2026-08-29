@@ -47,6 +47,8 @@ case "$*" in
   *"rollout restart"*) : ;;
   *"rollout undo"*) : ;;
   *"get cm"*) echo '{}' ;;
+  *"get namespace"*) echo "namespace exists" ;;
+  "create namespace sos-lab") : ;;
   *"get nodes"*) echo "node/x" ;;
   *"get pods"*) echo "NAME READY STATUS" ;;
   *"jsonpath"*) echo "" ;;
