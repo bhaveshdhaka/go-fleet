@@ -13,7 +13,9 @@ it — never improvise around a refusal.
 - **R2**: `R2_ACCESS_KEY_ID` + `R2_SECRET_ACCESS_KEY` + `RESTIC_PASSWORD`
   (bucket `hk-03-backup`; endpoint + repo path are recorded in the site
   registry's `backup:` section, restored with the repo clone).
-- **GitHub PAT** (repo scope) — go-fleet and 1ed-ge are private.
+- **GitHub PAT** (repo scope) — needed only for the private `1ed-ge`
+  repo (go-fleet is public; box-side pushes authenticate with the
+  restored `github.env` from the secrets home).
 - Note: openchamber/opencode session state is NOT backed up (owner
   decision: rebuildable).
 

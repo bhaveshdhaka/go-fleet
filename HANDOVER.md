@@ -10,12 +10,12 @@
 
 | Item | State |
 |---|---|
-| Repo | `/home/openchamber/workspaces/fleet`, git clean, master; remote `origin` = github.com/bhaveshdhaka/go-fleet (**private**) |
+| Repo | `/home/openchamber/workspaces/fleet`, git clean, master; remote `origin` = github.com/bhaveshdhaka/go-fleet (**public** since 2026-08-28) |
 | Corpus | 44 units / 550 assertions, fail=0 skip=0 (`bash scripts/test.sh`); `fleet check` 6/6 PASS |
 | Program | `PLAN.md` completion program WO-14..WO-19 **EXECUTED** (owner directive "no more sos lab, only go fleet") — secrets divorce, fresh-install path, rich register + next-engine ship path, --json surface, onboarding docs, secrets audit + release |
 | CLI | Go core `cmd/fleet` (module github.com/bhaveshdhaka/go-fleet, `fleet 0.1.0`) behind thin shims `scripts/fleet` + `ci/promote.sh`; binary `dist/fleet` via `ci/build-fleet.sh` |
 | Enforcement | front-matter schema v1, predicates P1-P6, full `next` engine, `.fleet.yaml` actor policy (prod human-gated) |
-| Distribution | MIT LICENSE; `ci/build-release.sh` static linux/darwin + SHA256SUMS (C11a); install.sh installs `prefix/bin/fleet` (C11b); GH repo private |
+| Distribution | MIT LICENSE; `ci/build-release.sh` static linux/darwin + SHA256SUMS (C11a); install.sh installs `prefix/bin/fleet` (C11b); GH repo public |
 | Ops engine | read-only parity (WO-7) + mutations dual-run PASSED (WO-8) + site migrated (WO-9): hk-03-dev is `engine: fleet`, data at `ops/sites/hk-03-dev/` (git-tracked); WO-14: secrets home `$HOME/.fleet/secrets/hk-03-dev/` (7 env files, 0700/0600, source sos-lab untouched), `secrets_dir` override DELETED from the schema, `site init --from` copies predecessor secrets; deploy secret-creation + envFrom now resolve through the site secrets dir (latent live bug fixed: services with declared secrets would have silently skipped secret creation) |
 | arjun-hk | **LIVE at https://arjun.hk** (WO-10): onboarded component (apps/arjun-hk, port 8080), gated promote built→dev→stage→prod (prod approval owner-via-agent per .fleet.yaml, owner directive journaled), kaniko multi-stage image, deployed to hk-03-dev, CNAME arjun.hk retargeted to the lab tunnel, gatus+dashboard monitoring (8 endpoints), HTTP 200 + served-content verified; contract tests C15a (iOS/Safari/retina/menu) run the served binary over loopback |
 | Drilled VM | RUNNING: QEMU pid `.vm/run/qemu.pid` (23088), `fleet-vm Ready v1.36.3+k3s1`, host API 127.0.0.1:16443 |

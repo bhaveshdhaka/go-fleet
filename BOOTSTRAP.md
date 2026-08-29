@@ -25,9 +25,6 @@ workarounds: if something fails, the agent stops and shows you the output.
      STORED in the fleet secrets home in Step 5
    - approval of a **UI password** (one will be proposed; you can supply
      your own)
-   - a **GitHub PAT (repo scope)** — the fleet repo is private and Step 6
-     clones it; hand the token to the model when it asks, or pre-run:
-     `git config --global url."https://<YOUR_GITHUB_PAT>@github.com/".insteadOf "https://github.com/"`
 
 ## The prompt — copy everything below the line into opencode
 
