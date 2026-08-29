@@ -8,6 +8,10 @@ ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
 USER root
+# /root must be traversable by uid 1000: the cluster kubeconfig mounts at
+# /root/.kube/fleet.kubeconfig (same absolute path on host and pod) and
+# fleet ops resolve it from pod sessions too.
+RUN chmod 755 /root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 libnss3 libnspr4 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 \
     libcups2 libdrm2 libxkbcommon0 libatspi2.0-0 libxcomposite1 libxdamage1 \

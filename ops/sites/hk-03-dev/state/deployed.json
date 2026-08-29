@@ -33,11 +33,11 @@
     "tag": "latest"
   },
   "openchamber": {
-    "deployed_at": "2026-08-29T11:47:36Z",
+    "deployed_at": "2026-08-29T12:48:46Z",
     "git_sha": "52ee878669867d5cc415f7da7bda1808d51fdf5d",
-    "image": "docker-registry.fleet.svc.cluster.local:5000/openchamber:2026.08.29-r112313",
+    "image": "docker-registry.fleet.svc.cluster.local:5000/openchamber:2026.08.29-r123849",
     "node": "hk-03-dev",
-    "tag": "2026.08.29-r112313"
+    "tag": "2026.08.29-r123849"
   },
   "sos-dashboard": {
     "deployed_at": "2026-08-29T10:29:22Z",

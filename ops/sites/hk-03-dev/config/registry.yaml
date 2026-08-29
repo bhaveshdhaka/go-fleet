@@ -63,6 +63,12 @@ services:
       path: /home/openchamber/.config/opencode
     - sub: ssh
       path: /home/openchamber/.ssh
+    - host: /root/.kube/fleet.kubeconfig
+      path: /root/.kube/fleet.kubeconfig
+      type: File
+      type: File
+    - host: /root/.fleet
+      path: /home/openchamber/.fleet
     - host: /workspace
       path: /home/openchamber/workspaces
     serviceAccount: openchamber
