@@ -2,96 +2,105 @@
 
 > Read order for any agent arriving cold: `README.md` → `AGENTS.md` (the
 > law) → `PLAN.md` (the program) → this file. Then `git log --oneline -8`.
-> (WORKING-NOTES.md was the ephemeral WO-5..WO-10 working file; deleted at
-> WO-10 with everything worthy codified here and in AGENTS.md.)
 > Facts below are measured, not inferred.
 
-## State at a glance
+## State at a glance (2026-08-29 — fresh-server era, estate LIVE)
 
 | Item | State |
 |---|---|
-| Repo | `/home/openchamber/workspaces/fleet`, git clean, master; remote `origin` = github.com/bhaveshdhaka/go-fleet (**public** since 2026-08-28) |
-| Corpus | 44 units / 550 assertions, fail=0 skip=0 (`bash scripts/test.sh`); `fleet check` 6/6 PASS |
-| Program | `PLAN.md` completion program WO-14..WO-19 **EXECUTED** (owner directive "no more sos lab, only go fleet") — secrets divorce, fresh-install path, rich register + next-engine ship path, --json surface, onboarding docs, secrets audit + release |
-| CLI | Go core `cmd/fleet` (module github.com/bhaveshdhaka/go-fleet, `fleet 0.1.0`) behind thin shims `scripts/fleet` + `ci/promote.sh`; binary `dist/fleet` via `ci/build-fleet.sh` |
-| Enforcement | front-matter schema v1, predicates P1-P6, full `next` engine, `.fleet.yaml` actor policy (prod human-gated) |
-| Distribution | MIT LICENSE; `ci/build-release.sh` static linux/darwin + SHA256SUMS (C11a); install.sh installs `prefix/bin/fleet` (C11b); GH repo public |
-| Ops engine | read-only parity (WO-7) + mutations dual-run PASSED (WO-8) + site migrated (WO-9): hk-03-dev is `engine: fleet`, data at `ops/sites/hk-03-dev/` (git-tracked); WO-14: secrets home `$HOME/.fleet/secrets/hk-03-dev/` (7 env files, 0700/0600, source sos-lab untouched), `secrets_dir` override DELETED from the schema, `site init --from` copies predecessor secrets; deploy secret-creation + envFrom now resolve through the site secrets dir (latent live bug fixed: services with declared secrets would have silently skipped secret creation) |
-| arjun-hk | **LIVE at https://arjun.hk** (WO-10): onboarded component (apps/arjun-hk, port 8080), gated promote built→dev→stage→prod (prod approval owner-via-agent per .fleet.yaml, owner directive journaled), kaniko multi-stage image, deployed to hk-03-dev, CNAME arjun.hk retargeted to the lab tunnel, gatus+dashboard monitoring (8 endpoints), HTTP 200 + served-content verified; contract tests C15a (iOS/Safari/retina/menu) run the served binary over loopback |
-| Drilled VM | RUNNING: QEMU pid `.vm/run/qemu.pid` (23088), `fleet-vm Ready v1.36.3+k3s1`, host API 127.0.0.1:16443 |
-| sos-lab | FROZEN ARCHIVE since WO-9: tree byte-identical to post-WO-8 baseline; its `./lab` reports only on its own (stale) data — fleet ops is the arbiter now |
-| Real cluster | hk-03-dev = the host this container runs ON (in-cluster SA `sos-lab/openchamber`). fleet NEVER uses ambient creds — site-declared access only (C12d) |
-| Drill leftovers | 4 completed `build-canary-*` Jobs + 1 `canary.bhavesh.hk` CNAME + 1 completed `build-arjun-hk-*` failed-job pod (first kaniko attempt, pre-fix) — inert, documented in journal |
-| STOP | WO-10 ends HERE: master checklist in workorders/WO-10.md all evidenced; **awaiting owner acceptance** — no further mutations |
+| Box | hk-03-dev: fresh Ubuntu 24.04.3 LTS, x86_64, node IP 202.73.4.149; root SSH; opencode TUI + in-cluster openchamber UI |
+| Repo | `/root/workspaces/fleet` (host) == `/home/openchamber/workspaces/fleet` (pod, via hostPath `/workspace` → symlink → `/root/workspaces`); master `7655390`, pushed; remote github.com/bhaveshdhaka/go-fleet (public) |
+| Corpus | 46u **fail=0** (574 pass, skip=1 — C4a kubectl tier skips honestly on offline hosts, passes on cluster hosts); `fleet check` 6/6; `ops doctor` ALL CLEAR (1 benign warning) |
+| Cluster | k3s v1.36.3+k3s1 single node (namespace **`fleet`** — the sos-lab namespace is DELETED); `/etc/rancher/k3s/registries.yaml` HTTP mirror + `/etc/hosts` ClusterIP entry for `docker-registry.fleet.svc.cluster.local`; `/workspace` → symlink → `/root/workspaces` |
+| Tunnel | **hk-03-dev-tunnel** (`50e0d13b-…`), config_src cloudflare, ingress reconciled from the registry (8 hosts); cloudflared runs IN-CLUSTER; sos-lab tunnel abandoned (exists in CF, unreferenced); bootstrap tunnel 472ae004 DELETED; host cloudflared uninstalled |
+| Estate | ALL LIVE + verified: `aio.bhavesh.hk` 200, `dav.bhavesh.hk` 302, `usenet.bhavesh.hk` 302, `arjun.hk` 200, `1ed.ge` 200, `mock.1ed.ge` 200, `oc.bhavesh.hk` 200, `dashboard.bhavesh.hk/f178b53074aa2765/` 200 (slug-hidden BY DESIGN — `/` returns 404) |
+| Data | trio + 1edge + 1edge-mocks restored from R2 `hk-03-backup/hk-03-dev` snapshot=latest (RESTORE.md §8 contract lines all seen); restic password PROVEN (snapshot listing rc=0); openchamber NOT restored (fresh, owner decision) |
+| openchamber | IN-CLUSTER pod is the ONLY UI (host systemd unit disabled, host cloudflared gone). Image r132017 = repo Dockerfile + overlay `ops/sites/hk-03-dev/images/openchamber/Dockerfile` (global CLI at /usr/local/bin, kubectl v1.36.3 baked, /root 0755, chromium parity libs). Projects registered POD-SIDE: fleet, arjun.hk, 1ed-ge (`/home/openchamber/workspaces/…`). Auth seeded into PVCs (OpenCode Go provider + python-deny config). UI session re-login required after the cutover (stale JWT) |
+| Fleet ops from pod | WORKING: secrets home mounted (`/root/.fleet` → `/home/openchamber/.fleet`, uid 1000 owns), kubeconfig mounted at the SAME absolute path both sides (`/root/.kube/fleet.kubeconfig`, server = node IP), kubectl baked. SITES access: `kubeconfig:/root/.kube/fleet.kubeconfig` |
+| fleethub | at **prod** (dev approval agent, prod approval owner-via-agent via UI session 09:18Z — owner-directed, journaled) |
+| Fixes shipped today | 6 commits `cfdbb32..7655390`: corpus hermeticity ×6 (fixture gitignore, drills off-pod, harness PATH, C4a offline tier), `01-k3s.sh` +k3s1 tag, infra deploy namespace-ensure, TUNNEL_TOKEN→token secret mapping, `site tunnel create` zone-scoped account resolution, `LabRegistryHost(ns)` de-legacy, overlay Dockerfile committed intent, BOOTSTRAP.md rewritten with the measured runbook, `docs/MCP-BRIEF.md` |
+| Next action | owner green-light on **WO-22 (`fleet mcp`)** — brief at `docs/MCP-BRIEF.md`; NOT started |
 
-## Rules that got agents burned this cycle (now enforced/asserted)
+## Rules that got agents burned (cumulative — now enforced/asserted)
 
 - Ambient resolution in ANY form: kubectl creds (rule 7) AND repo-root
   walk-up. Fixes: site-declared access + constructed child env (C12d),
   shims pin FLEET_ROOT, drills from neutral cwd with FLEET_ROOT pinned.
-- Journal honesty: never append a verify line before reading the summary;
-  corrections/findings are `#` lines (append-only, in the open).
-- Test scenarios neutralize ALL copied workorders generically.
-- kubectl with no HOME litters `.kube/` into the CWD — runner passes temp
-  HOME (fixed; keep it fixed).
-- **pyyaml rewrite hazard (WO-8)**: any deploy of a disabled service
-  rewrites the whole registry in `yaml.safe_dump` style. The mini parser
-  reads BOTH styles — regression: `TestMiniYamlPyyamlStyle` (C13a).
-- **Secrets-dir plumbing (WO-9)**: `LoadCloudflareToken`/`labDashboardSlug`
-  take the SECRETS DIR (they append the filename themselves); every call
-  site must go through `site.secretsDir(root)` — doubled-path bug caught
-  live by the doctor precondition. Regression: `TestSecretsDirOverride`.
-- **labServiceBlock absent-name bug (WO-9)**: named-return start defaults
-  to 0 — an absent name "matched" block [0,1). Always refuse with
-  "not registered" (test asserts the exact message).
-- **lab quirks mirrored bug-for-bug by design**: deploy PUTs the tunnel
-  config before the enabled flip (new hosts enter the tunnel at the next
-  `dns --apply`); `./lab status` crashes on null git_sha (no-git builds);
-  `./lab remove` leaves deployed.json residue and a stale-routed host.
-  fleet matches the first two, fixes the remove-side ones (journaled).
+- **Hermeticity is environment-shaped**: the corpus passed for months
+  inside the old pod and broke on every fresh host (fixture gitignored
+  by the bare `secrets/` pattern, drills assuming `KUBERNETES_SERVICE_HOST`,
+  units resolving go from operator PATH, kubectl 1.36 phoning home even
+  for `--dry-run=client`). Measured on a fresh box 2026-08-29 — all fixed.
+- **k3s fork tags carry `+k3s1`**; bare Kubernetes tags 404 on get.k3s.io
+  (01-k3s.sh fixed; test-onvm.sh:82 still has the bare form — untouched).
+- **Zone-scoped CF tokens list NO /accounts** — resolve the account id
+  from the zone object (fixed in `site tunnel create`; same lesson in
+  BOOTSTRAP.md Step 5).
+- **journal honesty**: never append a verify line before reading the
+  summary; corrections/findings are `#` lines (append-only, in the open).
+- **Secrets**: values only in the secrets home, never in git/logs/chat —
+  the CF token + restic password + R2 keys transited chat on 2026-08-29;
+  rotation is the owner's standing item.
+- **pyyaml rewrite hazard (WO-8)**, **secrets-dir plumbing (WO-9)**,
+  **labServiceBlock absent-name (WO-9)** — regressions asserted in corpus.
+- **lab quirks mirrored bug-for-bug by design** (deploy PUTs tunnel config
+  before the enabled flip; remove-side ones fleet fixes — journaled).
+
+## Standing cautions (fresh-server additions in bold)
+
+- **`/etc/rancher/k3s/registries.yaml` + the `/etc/hosts` ClusterIP entry
+  are load-bearing**: remove either and EVERY service pod hits
+  ImagePullBackOff. The kubeconfig file is uid-1000 owned with server =
+  node IP; the openchamber image chmods `/root` 755 for the same reason.
+  Do not "tidy" any of these.
+- **The fleetboard is slug-hidden** (`dashboard.env` DASHBOARD_SLUG):
+  `/` returning 404 is the design, not a fault.
+- **openchamber rebuilds** go through `ops build` (base ~8 min, overlay
+  after) — the overlay Dockerfile is committed intent; the pre-wipe copy
+  was untracked and died with the old box. Do not re-add the `oc-tools`
+  PVC mount: a fresh volume shadows `/home/openchamber/.npm-global`.
+- **Two opencode instances, no auto-sync**: host TUI (`/root/.local/share
+  /opencode`) and pod (PVCs). Provider key / config changes = seed both.
+  The pod owns its opencode db on the PVC.
+- **uid 1000 owns `/root/.fleet` + `/root/.kube/fleet.kubeconfig`** so
+  pod sessions read them; host fleet ops run as root and are unaffected.
+- Secrets: sos-lab-era files under `ops/sites/hk-03-dev/archive` are
+  inert; live values only in the secrets home. `.vm/` ~600MB gitignored.
+- The fleet binary never runs an interpreter; repo-wide interpreter-free
+  gate (C20d) + live deny rules in BOTH opencode instances' configs.
 
 ## Next action
 
-**Owner acceptance of the WO-14..WO-19 completion program.** Delivery
-highlights: secrets home (one mechanism, outside the repo, hk-03-dev
-migrated), BOOTSTRAP token STORAGE fix, fresh-install path
-(`site new`/`site tunnel create`/`infra deploy`/`site canary` — LIVE
-CANARY PASS on hk-03-dev with public HTTP 200 + clean teardown), rich
-`ops register` (full sos-lab runtime surface), `next` engine drives the
-entire ship path (C17a golden replay), `--json` + exit codes, product
-README + docs/{QUICKSTART,CONCEPTS,CLI}.md, openchamber project
-registration step in BOOTSTRAP, secrets audit (tree+history clean),
-release binaries built. Known open item (owner call, predates program):
-1edge-mocks deployed-intent tag drift — a `ops build/deploy 1edge-mocks`
-or a state acceptance heals it.
+**Owner decision on WO-22 (`fleet mcp`)** — research-grounded brief at
+`docs/MCP-BRIEF.md`: official Go SDK, read verbs first, mutations behind
+the existing actor policy, Tasks extension for long builds, Streamable
+HTTP + Cloudflare Access remote, official registry listing. Nothing
+built yet. Minor backlog: dashboard-render build-vs-deployed state
+warning (bookkeeping), `ops status` cosmetic "pods (sos-lab)" header,
+trio-as-openchamber-projects (owner declined 2026-08-29, revisit on ask).
 
-## Standing cautions
+## Session close 2026-08-29 (fresh server + estate bring-up)
 
-- Secrets: sos-lab `secrets/` are read by fleet only for key-name checks
-  and the CF token (transient, never printed). The openchamber gh token
-  once flashed into the chat transcript (key-filter slip) — chat-only,
-  present in no file; rotate if that matters to you.
-- `.vm/` is ~600 MB gitignored; `scripts/vm-tier/down.sh` for graceful
-  ACPI shutdown.
-- Journal `#` comment lines are the verify/incident channel (doctor and
-  C5c/C6c skip them); WO-5's P4 predicate reads `# verify wo=<id>` lines.
-- The fleet binary never runs an interpreter; the repo tree is
-  interpreter-free repo-wide (C20d scans go/yaml/md/sh incl. tests/ and
-  testdata/, from FLEET_ROOT). Goldens freeze the historical labctl
-  formats — keep them green.
-
-## Session close 2026-08-28 (WO-14..WO-20 + wrap)
-
-| Item | State |
-|---|---|
-| Program | WO-14..WO-19 EXECUTED + WO-20 core (backup engine, mocks reconcile, safety rails, trio backup + restore drill, legacy purge) — all pushed (b85b625) |
-| Backups | trio + secrets home in R2 hk-03-backup (restic 0.17.3); nightly 04:00 CronJobs (critical excluded); retention 7d/4w |
-| Safety | quiesce_state.json crash-safety + sweep; registry critical:true quiesce refusal (openchamber); explicit-names-or---all scope; secrets home lost+recovered incident journaled |
-| Legacy | python:3.12-alpine renderer REPLACED by fleet-built Go (dashboard-render:2026.08.28-r212549); dashboard-render.py deleted; C20d gate GREEN (no interpreted runtimes — repo/rendered/live); golden monitor.json flipped via FLEET_GOLDEN_REGEN |
-| Agent env | interpreter deny LIVE: permission block in ~/.config/opencode/opencode.jsonc (mirrors BOOTSTRAP step 6c); corpus is interpreter-free — JSON shape asserts via tests/lib/jsonq (stdlib Go) |
-| Corpus | 46u/577a fail=0 skip=0 (`FLEET_WO=WO-21 ./scripts/fleet verify`, journaled); check 6/6 |
-| OPEN | (1) WO-21 (OPEN): C20c kill-test unit + RESTORE/GLOSSARY/PROJECTS-GUIDE docs; (2) OWNER: rotate R2 token + RESTIC_PASSWORD (transited chat) — `restic key add` then remove old; (3) OPENCHAMBER/OPENCODE session state NOT backed up (owner decision: rebuildable) |
-| Secrets note | secrets home was deleted+recovered once (cause unidentified) — rotation (item 2) is strongly advised |
-| Docs pass (owner-directed) | product docs sos-free + **fleetboard** naming adopted (README/QUICKSTART/CONCEPTS/AGENTS); docs/PROJECTS-GUIDE.md delivered (develop-vs-self-host lanes; importing stays simple — new modern Go projects) + docs/GLOSSARY.md; README corpus counts corrected (46u/577a); Cloudflare-token instructions kept to 1-2-line pointers; live runtime names (namespace, dashboard deployment, registry URL) unchanged — renaming them is a future migration WO (owner call) |
-| Format-day ready | docs/RESTORE.md delivered (bootstrap -> seed r2.env -> restore-secrets FIRST -> doctor -> infra deploy (old CNAMEs re-live via restored tunnel token, no DNS work) -> deploy trio -> ops restore -> verify; rebuild-from-source for arjun-hk/1edge/mocks; FLEET_RESTIC_BIN seam; critical:true note for openchamber/registry); BOOTSTRAP.md gained the private-clone GitHub PAT step + bzip2 in Step 0 (pinned restic needs it); WO-21 piece 2 integrated:true — only C20c remains open |
-| Close-out (owner-directed) | interpreter-free workflow: C12b/C12d/C17a fixture edits are plain sed/awk, C12c/C17c shape asserts via tests/lib/jsonq; labfix renderer fixture deleted (C13b frozen sequence updated to the golden-flipped 14-call order); vm-tier seed server ported to stdlib Go; C20d gate hardened (scans run from FLEET_ROOT — were vacuous inside the corpus — and cover tests/ + testdata/); deny LIVE in user config; WO-20 closed truthfully (pieces 3-6 integrated, P5) with open items split to WO-21 (OPEN); ops backup now REFUSES unknown service names (was a silent `BACKUP OK services=0`); corpus 46u/577a fail=0 + check 6/6 measured |
+- BOOTSTRAP.md executed end to end on a wiped box (first real run): every
+  step's evidence captured in-session; the doc then rewritten with the
+  measured sequence (supervisor split, token-verify + account-from-zone,
+  never reconfigure shared tunnels, `--json` install contract, honest
+  corpus skip, r2.env secrets-first, project mechanics, prod-gate
+  expectation).
+- RESTORE.md §3–§10 executed on the fresh cluster: secrets home restored
+  (9 files), infra deployed, trio deployed + data restored, arjun-hk +
+  1edge + mocks rebuilt from source and deployed, data restored, all
+  hosts verified. Doctor ALL CLEAR.
+- De-legacy completed under the owner directive: namespace `fleet`,
+  tunnel `hk-03-dev-tunnel` (created via `site tunnel create` after the
+  zone-scoped-account fix), `dashboard.bhavesh.hk`, project key
+  `go-fleet`, registry host namespace-derived. sos-lab namespace deleted;
+  sos-lab tunnel unreferenced.
+- openchamber consolidated: in-cluster pod (registry-critical path),
+  host copy retired; auth/config/projects seeded into PVCs; kubeconfig +
+  secrets mounted; the "castrated pod" is not — pod sessions run the
+  full fleet ops surface (measured).
+- fleethub drove the whole ship path to prod (first session + owner via
+  UI) — gates held where they must.
+- Journal: findings in `#` lines 2026-08-29; commits `2f2597d`, `a323330`,
+  `eb2ffb7`, `74818f6`, `7655390` pushed to master.
