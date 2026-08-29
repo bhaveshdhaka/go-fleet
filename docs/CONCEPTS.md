@@ -47,13 +47,13 @@ pieces, no unjournaled verifies, no tampered journal.
 
 ## The ops engine
 
-Site-level operations mirror the proven sos-lab engine:
+Site-level operations:
 `ops register` (rich runtime surface: storage, mounts, resources,
 probePath, runAsUser, serviceAccount, args), `ops build` (kaniko, git-SHA
 pinned, date tags), `ops deploy` (secret → deployment → service → PVC →
 DNS → tunnel → monitoring → state), `ops rollback`, `ops remove
 [--unregister --delete-data]`, `ops dns --apply` (CNAME + tunnel ingress
-reconcile across zones), `ops monitor` (gatus + dashboard), `ops verify`
+reconcile across zones), `ops monitor` (gatus + fleetboard), `ops verify`
 (public HTTP smoke). Mutating verbs honor `--dry-run` byte-equality.
 
 ## The next engine
@@ -61,7 +61,7 @@ reconcile across zones), `ops monitor` (gatus + dashboard), `ops verify`
 `fleet next` reads the truths and prints the exact next legal action —
 lifecycle hops first, then the ops ladder (build → deploy) for prod-stage
 components. Same state → same output. It is the agent loop's compass and
-is proven by a golden replay unit (C17a).
+is proven by a golden replay test.
 
 ## Testing
 

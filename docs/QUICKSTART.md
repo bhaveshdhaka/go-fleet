@@ -1,10 +1,12 @@
 # QUICKSTART — fresh Ubuntu box to live public site
 
 Prerequisites: Ubuntu 22.04/24.04, root or a dedicated user, a domain on
-Cloudflare, and a **Cloudflare API token with Cloudflare Tunnel Edit +
-Zone DNS Edit** for your zones. The guided, agent-driven version of this
-page is [BOOTSTRAP.md](../BOOTSTRAP.md) (paste it into opencode; it also
-registers fleet as an openchamber project).
+Cloudflare, and a **Cloudflare API token** with **Cloudflare Tunnel Edit +
+Zone DNS Edit** for your zones (create one at
+<https://dash.cloudflare.com/profile/api-tokens> — Cloudflare's own wizard
+covers the rest). The guided, agent-driven version of this page is
+[BOOTSTRAP.md](../BOOTSTRAP.md): paste it into opencode and never type
+these commands by hand.
 
 ## 0. Install fleet
 
@@ -19,7 +21,8 @@ bash scripts/test.sh         # expect: FLEET SUMMARY ... fail=0
 
 ## 1. Stand up the cluster (or point at one)
 
-Single-node k3s (root):
+Single-node k3s — lightweight Kubernetes, the app runtime on your
+server (root):
 
 ```bash
 curl -sfL https://get.k3s.io | sh -          # scripts/blocks/01-k3s.sh has the pinned variant
@@ -68,8 +71,15 @@ the site registry. Fill the remaining `TODO_ACCOUNT_ID` in
 ```
 
 Deploys the in-cluster docker registry, cloudflared (token from
-`tunnel.env`), gatus, and the dashboard; then syncs monitoring. Contract:
-`INFRA OK site=mysite applied=3`.
+`tunnel.env`), gatus, and the fleetboard dashboard; then syncs
+monitoring. Contract: `INFRA OK site=mysite applied=3`.
+
+Your **fleetboard** — the consolidated health/status page for everything
+registered on the site — is served at
+`https://example.com/<DASHBOARD_SLUG>/` (the slug is the
+`DASHBOARD_SLUG=` value in `~/.fleet/secrets/mysite/dashboard.env`).
+Every service you register or deploy from here on shows up on it with
+its live gatus health.
 
 ## 6. Prove it end to end
 

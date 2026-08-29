@@ -40,8 +40,8 @@ Two-file rule of this repo:
                                            # ops/sites/<name> + cutover SITES.yaml
                                            # (MUTATES repo; predecessor secrets
                                            # COPIED into the secrets home)
-    ./scripts/fleet ops <status|doctor>    # READ-ONLY site observation (sos-lab
-                                           # parity; explicit access, zero mutations)
+    ./scripts/fleet ops <status|doctor>    # READ-ONLY site observation
+                                           # (explicit access, zero mutations)
     ./scripts/fleet ops update <service> [--host H] [--image I] [--repo D]
                                            [--dockerfile F] [--probe-path /P] [--run-as-user UID]
                                            [--service-account SA] [--namespace NS]
@@ -87,10 +87,8 @@ spine.
 1. Mutations happen ONLY through ./fleet (init/onboard/approve/promote/
    verify/wo new, and since WO-8 the ops mutation verbs build/deploy/
    rollback/remove/dns --apply/monitor) and the numbered block scripts
-   under scripts/blocks/ (00–04). No ad-hoc kubectl/curl/mv. Ops
-   mutations run DUAL-RUN with ./lab on hk-03-dev until WO-8 parity
-   passes (identical results, ./lab doctor ALL CLEAR after every fleet
-   mutation); sos-lab stays authoritative until cutover.
+   under scripts/blocks/ (00–04). No ad-hoc kubectl/curl/mv. fleet is
+   the single mutation authority for every site.
 2. doctor, status, next, wo list/show, and any --dry-run are read-only.
    init, onboard, wo new, approve, promote and verify mutate.
 3. promote RE-RUNS its listed test units right now; stale green logs count
