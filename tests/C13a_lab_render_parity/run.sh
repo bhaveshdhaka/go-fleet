@@ -38,7 +38,7 @@ for s in deploy-with-sha deploy-no-sha build-null-sha rollback; do
   fi
 done
 
-out="$(env GOPROXY=off GOFLAGS=-mod=readonly GOTOOLCHAIN=local CGO_ENABLED=0 \
+out="$(env GOPROXY=off GOFLAGS=-mod=vendor GOTOOLCHAIN=local CGO_ENABLED=0 \
   "$GO_BIN" test ./internal/fleet -count=1 -v \
   -run 'TestLabRenderParity|TestLabStateParity|TestGatusEmitter|TestRegistryEdits|TestLabEnvOrder' 2>&1)"
 rc=$?

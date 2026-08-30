@@ -42,7 +42,7 @@ for t in $targets; do
   echo "[release] building fleet_${os}_${arch} version=$ver ..."
   (
     cd "$FLEET_ROOT" || exit 1
-    export GOPROXY=off GOFLAGS=-mod=readonly GOTOOLCHAIN=local CGO_ENABLED=0
+    export GOPROXY=off GOFLAGS=-mod=vendor GOTOOLCHAIN=local CGO_ENABLED=0
     export GOOS="$os" GOARCH="$arch"
     exec "$go_bin" build \
       -trimpath -buildvcs=false \

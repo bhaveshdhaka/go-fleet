@@ -48,7 +48,7 @@ services:
     host: oc.bhavesh.hk
     port: 3000
     namespace: fleet
-    enabled: true
+    enabled: false
     critical: true
     storage:
       size: 10Gi

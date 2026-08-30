@@ -108,6 +108,8 @@ func Run(cmd string, args []string) int {
 		return cmdInfra(args)
 	case "ops":
 		return cmdOps(args)
+	case "mcp":
+		return cmdMcp(args)
 	default:
 		fmt.Fprintf(os.Stderr, "FLEET ERROR :: unknown command '%s' (see --help)\n", cmd)
 		return 1

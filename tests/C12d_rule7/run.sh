@@ -53,6 +53,10 @@ printf '{}\n' > "$lab/state/deployed.json"
 printf '{}\n' > "$lab/state/builds.json"
 
 # 1. in-cluster declared but no in-cluster env -> hard refuse
+# (the de-legacy registry declares kubeconfig access, which resolves on
+# operator hosts — pin the fixture site to in-cluster so the ambient-
+# fallback refusal premise holds hermetically, WO-22 corpus repair)
+sed -i "s|^    access: .*|    access: in-cluster|" "$repo/ops/SITES.yaml"
 env -u KUBERNETES_SERVICE_HOST FLEET_ROOT="$repo" "$F" ops status > "$scratch/out" 2>&1
 rc=$?
 if [[ $rc -eq 1 ]] && grep -q "refusing to fall back to ambient credentials" "$scratch/out"; then

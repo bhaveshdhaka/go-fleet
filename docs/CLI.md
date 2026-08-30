@@ -16,6 +16,23 @@ from source when stale). Run `fleet --help` for the full list.
 | `ops doctor [--site S]` | check lines + `DOCTOR: N problem(s) found` | array of `{check,ok,detail,status}` |
 | `ops dns [--site S]` | `dns: <host>: ok|missing|drift|created|fixed` + drift summary | same shape as doctor |
 
+## MCP server (read-only, WO-22 phase 1)
+
+`fleet mcp` serves the Model Context Protocol over stdio — a thin,
+READ-ONLY adapter over the verbs above (same `--json` truth, same exit
+codes; the self-execed child gets an explicit env allowlist with
+`FLEET_ROOT` pinned, rule 7). No mutating verb is reachable.
+
+- **Tools**: `fleet_status`, `fleet_doctor`, `fleet_next`, `fleet_check`,
+  `fleet_sites`, `fleet_wo_list`, `fleet_wo_show`, `ops_status`,
+  `ops_doctor`, `ops_dns` (report form only).
+- **Resources**: `fleet://lifecycle/journal`, `fleet://registry/projects`,
+  `fleet://registry/state`, `fleet://registry/sites`,
+  `fleet://lifecycle/gates`.
+- Errors surface as `isError` tool results (rc≠0), never crashes; doctor
+  `ok:false` and `ops status cluster:false` are DATA (valid JSON), not
+  errors. Secret VALUES never appear (asserted by C22b).
+
 ## Site verbs (mutations)
 
 - `site new <name> [--domain D] [--access …] [--dry-run]` — scaffold;

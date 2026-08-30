@@ -1,7 +1,10 @@
 # MCP BRIEF — what it is, where it stands, and what it means for fleet
 
 > Research-grounded as of 2026-08-29. Decision requested: green-light
-> WO-22 (`fleet mcp`). Building NOT started — this is the brief only.
+> WO-22 (`fleet mcp`). **UPDATE 2026-08-29: phase 1 BUILT and corpus-
+> green** — `fleet mcp` stdio serves 10 read-only tools + 5 contract
+> resources (official Go SDK v1.7.0, vendored; C22a contract unit, C22b
+> secret-leak guard). Phases 2–3 below remain parked until re-opened.
 
 ## 1. What MCP is
 
@@ -65,8 +68,9 @@ release factory any AI client can drive, with human gates that hold."*
 
 ## 5. Recommended sequence (WO-22, through the repo's own process)
 
-1. `fleet mcp` stdio — read verbs only (status/doctor/check/next/wo list)
+1. ~~`fleet mcp` stdio — read verbs only~~ **DONE 2026-08-29** (10 tools,
+   5 resources, SDK vendored, C22a + C22b corpus units)
 2. mutation tools gated by the existing actor policy (promote/deploy),
-   Tasks extension for build/deploy
+   Tasks extension for build/deploy — **PARKED**
 3. Streamable HTTP + Cloudflare Access behind the customer tunnel,
-   official registry listing, docs
+   official registry listing, docs — **PARKED**

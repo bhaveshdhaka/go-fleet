@@ -33,7 +33,7 @@ ver="$(cat "$FLEET_ROOT/VERSION" 2>/dev/null | tr -d '[:space:]')"
 
 (
   cd "$FLEET_ROOT" || exit 1
-  export GOPROXY=off GOFLAGS=-mod=readonly GOTOOLCHAIN=local CGO_ENABLED=0
+  export GOPROXY=off GOFLAGS=-mod=vendor GOTOOLCHAIN=local CGO_ENABLED=0
   exec "$go_bin" build \
     -trimpath -buildvcs=false \
     -ldflags "-X main.version=${ver}" \

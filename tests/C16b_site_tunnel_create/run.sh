@@ -16,7 +16,7 @@ if [[ -z "$GO_BIN" ]]; then
 fi
 
 cd "$FLEET_ROOT"
-out="$(env GOPROXY=off GOFLAGS=-mod=readonly GOTOOLCHAIN=local CGO_ENABLED=0 \
+out="$(env GOPROXY=off GOFLAGS=-mod=vendor GOTOOLCHAIN=local CGO_ENABLED=0 \
   "$GO_BIN" test ./internal/fleet -count=1 -v \
   -run 'TestSiteTunnelCreate' 2>&1)"
 rc=$?

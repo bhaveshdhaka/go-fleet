@@ -23,7 +23,7 @@ assert_eq "go.mod pins TOOLCHAIN_GO_VERSION" "$TOOLCHAIN_GO_VERSION" "$got"
 # offline vet of the whole module
 (
   cd "$FLEET_ROOT" || exit 1
-  export GOPROXY=off GOFLAGS=-mod=readonly GOTOOLCHAIN=local
+  export GOPROXY=off GOFLAGS=-mod=vendor GOTOOLCHAIN=local
   go vet ./... >/dev/null 2>&1
 )
 if [[ $? -eq 0 ]]; then

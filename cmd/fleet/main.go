@@ -40,6 +40,8 @@ const helpText = `fleet <command>
   ops <build|deploy|rollback|dns|monitor|remove|verify|register|update>
                                          site operations (mutations; WO-8
                                          dual-run PASSED, WO-9 fleet-managed)
+  mcp                                    stdio MCP server, READ-ONLY tools +
+                                         contract resources (WO-22 phase 1)
   approve <component> <dev|prod> [who]   write approval file + journal
   promote <component> <to-stage> [...]   gated stage transition
   verify [units...]                      run the test corpus, journal the result
@@ -51,6 +53,7 @@ INFRA OK / CANARY PASS) are byte-stable; every read verb also accepts
 `
 
 func main() {
+	fleet.Version = version
 	args := os.Args[1:]
 	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" {
 		fmt.Print(helpText)
