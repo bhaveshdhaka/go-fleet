@@ -79,7 +79,7 @@ if save_resp 2; then report_pass "tools/list responds"; else report_fail "tools/
 tl="$scratch/resp-2.json"
 
 ntools="$("$J" "$tl" len .result.tools 2>/dev/null)"
-assert_eq "exactly 10 tools exposed" "10" "$ntools"
+assert_eq "exactly 11 tools exposed" "11" "$ntools"
 
 grep -o '"name":"[^"]*"' "$tl" | sed 's/"name":"//;s/"$//' | sort > "$scratch/tool-names.txt"
 cat > "$scratch/tool-names-want.txt" <<'EOF'
@@ -93,6 +93,7 @@ fleet_wo_show
 ops_dns
 ops_doctor
 ops_status
+ops_verify
 EOF
 if diff -u "$scratch/tool-names-want.txt" "$scratch/tool-names.txt" > "$scratch/tool-names.diff" 2>&1; then
   report_pass "tool set is exactly the read-only surface"

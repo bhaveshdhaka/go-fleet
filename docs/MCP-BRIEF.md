@@ -2,7 +2,7 @@
 
 > Research-grounded as of 2026-08-29. Decision requested: green-light
 > WO-22 (`fleet mcp`). **UPDATE 2026-08-29: phase 1 BUILT and corpus-
-> green** — `fleet mcp` stdio serves 10 read-only tools + 5 contract
+> green** — `fleet mcp` stdio serves 11 read-only tools (incl. ops_verify) + 5 contract
 > resources (official Go SDK v1.7.0, vendored; C22a contract unit, C22b
 > secret-leak guard). Phases 2–3 below remain parked until re-opened.
 
@@ -108,3 +108,28 @@ claude mcp add fleet -- <absolute-path>/dist/fleet mcp
 Any generic client: command `<absolute-path>/dist/fleet`, args `["mcp"]`,
 transport stdio. The binary pins FLEET_ROOT itself (or honors the
 client-provided `FLEET_ROOT` env); no ambient credentials are consulted.
+
+## 8. Phase 2 — started (2026-08-30)
+
+Mutation tools are LIVE behind an explicit opt-in: `fleet mcp
+--mutations` or `FLEET_MUTATIONS=1` in the client's server environment.
+Surface: `fleet_approve`, `fleet_promote` (dry_run), `ops_build`,
+`ops_deploy`, `ops_rollback`. Design invariants held:
+
+- **Registration-gated**: a default server never lists a mutating tool;
+  calling one unregistered is a protocol error (C22e J1/J2).
+- **Adapter, not second brain**: every mutation is the CLI verb — the
+  actor policy (prod approvals refused for non-allowed actors, C22e J4),
+  approval files, and the promote-time re-run of the journey corpus are
+  the enforcement and live in the binary.
+- **Refusal journeys in the same change** (rule 9): C22e proves every
+  illegal path with the exact fix, and the legal path works (J5).
+- **Wired into the gates**: C22e sits in gates.yaml on both gated hops —
+  an MCP mutation change that breaks a refusal turns the corpus red AND
+  the promote gate.
+
+Still open in phase 2: Tasks-extension evaluation on the pinned SDK
+(long builds currently use per-tool timeouts: build 15m); policy call on
+`ops dns --apply` / `ops monitor` exposure (deliberately not exposed).
+Phase 3 (Streamable HTTP + Cloudflare Access + registry listing) remains
+parked.

@@ -225,10 +225,11 @@ sweep_tool ops_status     '{}'                          error
 sweep_tool ops_doctor     '{}'                          error
 sweep_tool ops_dns        '{}'                          error
 sweep_tool ops_status     '{"site":"ghost"}'            error
+sweep_tool ops_verify     '{"service":"alpha"}'         error
 if [[ -z "$sweep_bad" ]]; then
-  report_pass "J6: permutation sweep — 12 tool/arg shapes all well-formed"
+  report_pass "J6: permutation sweep — 13 tool/arg shapes all well-formed"
 else
-  report_fail "J6: permutation sweep — 12 tool/arg shapes all well-formed" "malformed: $sweep_bad"
+  report_fail "J6: permutation sweep — 13 tool/arg shapes all well-formed" "malformed: $sweep_bad"
 fi
 
 # shutdown: clean EOF exit + quiet stderr

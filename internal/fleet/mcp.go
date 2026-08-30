@@ -39,11 +39,26 @@ var Version = "dev"
 // kubectl; a hung cluster must not hang the server session).
 const mcpToolTimeout = 120 * time.Second
 
-// cmdMcp serves the MCP protocol over stdio. It takes no flags in phase 1.
+// cmdMcp serves the MCP protocol over stdio. Default surface is
+// READ-ONLY (phase 1, unchanged contract). Mutation tools (phase 2)
+// register ONLY behind an explicit opt-in: `fleet mcp --mutations` or
+// FLEET_MUTATIONS=1 in the client's server environment. Gating at
+// REGISTRATION means a read-only client cannot even see a mutating tool;
+// the CLI-side gates (actor policy, approvals, promote re-runs of the
+// journey corpus) remain the hard blocks behind every mutation.
 func cmdMcp(args []string) int {
-	if len(args) > 0 {
-		fmt.Fprintln(os.Stderr, "usage: fleet mcp   (stdio MCP server, read-only; WO-22)")
-		return 2
+	mutations := false
+	for _, a := range args {
+		switch a {
+		case "--mutations":
+			mutations = true
+		default:
+			fmt.Fprintln(os.Stderr, "usage: fleet mcp [--mutations]   (stdio MCP server; read-only unless --mutations, WO-22)")
+			return 2
+		}
+	}
+	if os.Getenv("FLEET_MUTATIONS") == "1" {
+		mutations = true
 	}
 	p, rc := mustPaths()
 	if rc != 0 {
@@ -56,10 +71,24 @@ func cmdMcp(args []string) int {
 		Version: Version,
 	}, &mcp.ServerOptions{
 		Instructions: "Read-only observation of the fleet control plane. " +
-			"Mutations (promote/approve/ops build|deploy|rollback|remove) are NOT " +
+			"Mutations (promote/approve/ops build|deploy|rollback) are NOT " +
 			"exposed; use the fleet CLI under its actor policy instead.",
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 	})
+	if mutations {
+		srv = mcp.NewServer(&mcp.Implementation{
+			Name:    "fleet",
+			Title:   "fleet control plane",
+			Version: Version,
+		}, &mcp.ServerOptions{
+			Instructions: "fleet control plane. Mutation tools ARE enabled " +
+				"(explicit opt-in): every one executes the fleet CLI, so the " +
+				"actor policy, approval gates, and the promote-time re-run of " +
+				"the journey corpus apply exactly as on the command line. " +
+				"Refusals arrive as isError results with the exact fix.",
+			Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		})
+	}
 
 	// --- tools (read verbs, --json machine contract) --------------------
 
@@ -70,7 +99,7 @@ func cmdMcp(args []string) int {
 		if in.Component != "" {
 			argv = append(argv, in.Component)
 		}
-		return mcpRunJSON(ctx, p.Root, argv)
+		return mcpRunJSON(ctx, p.Root, mcpToolTimeout, argv)
 	}
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "fleet_status",
@@ -81,35 +110,35 @@ func cmdMcp(args []string) int {
 		Name:        "fleet_doctor",
 		Description: "Registry/state/gate/journal drift check (fleet doctor --json). ok=false lists issues.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in struct{}) (*mcp.CallToolResult, any, error) {
-		return mcpRunJSON(ctx, p.Root, []string{"doctor", "--json"})
+		return mcpRunJSON(ctx, p.Root, mcpToolTimeout, []string{"doctor", "--json"})
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "fleet_next",
 		Description: "Next legal action per the guidance engine (fleet next --json): same state -> same action.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in struct{}) (*mcp.CallToolResult, any, error) {
-		return mcpRunJSON(ctx, p.Root, []string{"next", "--json"})
+		return mcpRunJSON(ctx, p.Root, mcpToolTimeout, []string{"next", "--json"})
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "fleet_check",
 		Description: "Predicates P1-P6 report for workorder authoring drift (fleet check --json).",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in struct{}) (*mcp.CallToolResult, any, error) {
-		return mcpRunJSON(ctx, p.Root, []string{"check", "--json"})
+		return mcpRunJSON(ctx, p.Root, mcpToolTimeout, []string{"check", "--json"})
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "fleet_sites",
 		Description: "Managed sites registry (fleet site list --json).",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in struct{}) (*mcp.CallToolResult, any, error) {
-		return mcpRunJSON(ctx, p.Root, []string{"site", "list", "--json"})
+		return mcpRunJSON(ctx, p.Root, mcpToolTimeout, []string{"site", "list", "--json"})
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "fleet_wo_list",
 		Description: "Workorder list with status headers (fleet wo list). Text output.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in struct{}) (*mcp.CallToolResult, any, error) {
-		return mcpRunText(ctx, p.Root, []string{"wo", "list"})
+		return mcpRunText(ctx, p.Root, mcpToolTimeout, []string{"wo", "list"})
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
@@ -121,7 +150,7 @@ func cmdMcp(args []string) int {
 		if !validWorkorderID(in.ID) {
 			return mcpErrorResult(fmt.Sprintf("invalid workorder id %q", in.ID)), nil, nil
 		}
-		return mcpRunText(ctx, p.Root, []string{"wo", "show", in.ID})
+		return mcpRunText(ctx, p.Root, mcpToolTimeout, []string{"wo", "show", in.ID})
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
@@ -130,7 +159,7 @@ func cmdMcp(args []string) int {
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in struct {
 		Site string `json:"site,omitempty" jsonschema:"optional site name when multiple sites are registered"`
 	}) (*mcp.CallToolResult, any, error) {
-		return mcpRunJSON(ctx, p.Root, mcpOpsArgs("status", in.Site))
+		return mcpRunJSON(ctx, p.Root, mcpToolTimeout, mcpOpsArgs("status", in.Site))
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
@@ -139,7 +168,7 @@ func cmdMcp(args []string) int {
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in struct {
 		Site string `json:"site,omitempty" jsonschema:"optional site name when multiple sites are registered"`
 	}) (*mcp.CallToolResult, any, error) {
-		return mcpRunJSON(ctx, p.Root, mcpOpsArgs("doctor", in.Site))
+		return mcpRunJSON(ctx, p.Root, mcpToolTimeout, mcpOpsArgs("doctor", in.Site))
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
@@ -148,8 +177,34 @@ func cmdMcp(args []string) int {
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in struct {
 		Site string `json:"site,omitempty" jsonschema:"optional site name when multiple sites are registered"`
 	}) (*mcp.CallToolResult, any, error) {
-		return mcpRunJSON(ctx, p.Root, mcpOpsArgs("dns", in.Site))
+		return mcpRunJSON(ctx, p.Root, mcpToolTimeout, mcpOpsArgs("dns", in.Site))
 	})
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "ops_verify",
+		Description: "Curl a service's public URL and report the HTTP code vs expectation (fleet ops verify <service> [--expect N]). Read-only.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in struct {
+		Service string `json:"service" jsonschema:"site service name"`
+		Site    string `json:"site,omitempty" jsonschema:"optional site name when multiple sites are registered"`
+		Expect  int    `json:"expect,omitempty" jsonschema:"expected HTTP code class start (default 200)"`
+	}) (*mcp.CallToolResult, any, error) {
+		if in.Service == "" {
+			return mcpErrorResult("ops_verify requires a service name"), nil, nil
+		}
+		argv := []string{"ops", "verify"}
+		if in.Site != "" {
+			argv = append(argv, "--site", in.Site)
+		}
+		argv = append(argv, in.Service)
+		if in.Expect != 0 {
+			argv = append(argv, "--expect", fmt.Sprintf("%d", in.Expect))
+		}
+		return mcpRunText(ctx, p.Root, mcpToolTimeout, argv)
+	})
+
+	if mutations {
+		mcpRegisterMutations(srv, p.Root)
+	}
 
 	// --- resources (contract files; key names at most, never values) ----
 
@@ -230,11 +285,12 @@ func userHome() (string, error) {
 	return "", fmt.Errorf("no home dir")
 }
 
-// mcpRun self-execs the fleet binary for one read verb and returns
+// mcpRun self-execs the fleet binary for one verb and returns
 // (stdout, stderr, exit code). Exit codes are the CLI machine contract:
-// 0 ok, 1 fail, 2 usage/policy refusal.
-func mcpRun(ctx context.Context, root string, argv []string) (string, string, int) {
-	ctx, cancel := context.WithTimeout(ctx, mcpToolTimeout)
+// 0 ok, 1 fail, 2 usage/policy refusal. Long verbs (build/deploy/
+// rollback/promote's gate re-runs) pass their own generous timeout.
+func mcpRun(ctx context.Context, root string, timeout time.Duration, argv []string) (string, string, int) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	exe, err := os.Executable()
 	if err != nil {
@@ -267,8 +323,8 @@ func mcpRun(ctx context.Context, root string, argv []string) (string, string, in
 // still emits its JSON contract (doctor ok=false, ops status cluster=false):
 // those come back as normal results. Only non-JSON failures (FLEET ERROR,
 // rc=2 refusals) become isError results carrying stderr.
-func mcpRunJSON(ctx context.Context, root string, argv []string) (*mcp.CallToolResult, any, error) {
-	stdout, stderr, rc := mcpRun(ctx, root, argv)
+func mcpRunJSON(ctx context.Context, root string, timeout time.Duration, argv []string) (*mcp.CallToolResult, any, error) {
+	stdout, stderr, rc := mcpRun(ctx, root, timeout, argv)
 	trimmed := strings.TrimSpace(stdout)
 	if rc == 0 || (rc == 1 && json.Valid([]byte(trimmed)) && trimmed != "") {
 		return &mcp.CallToolResult{
@@ -280,8 +336,8 @@ func mcpRunJSON(ctx context.Context, root string, argv []string) (*mcp.CallToolR
 }
 
 // mcpRunText wraps a text-verb (wo list/show): stdout verbatim.
-func mcpRunText(ctx context.Context, root string, argv []string) (*mcp.CallToolResult, any, error) {
-	stdout, stderr, rc := mcpRun(ctx, root, argv)
+func mcpRunText(ctx context.Context, root string, timeout time.Duration, argv []string) (*mcp.CallToolResult, any, error) {
+	stdout, stderr, rc := mcpRun(ctx, root, timeout, argv)
 	if rc != 0 {
 		return mcpErrorResult(strings.TrimSpace(mcpErrText(stdout, stderr))), nil, nil
 	}
@@ -305,4 +361,111 @@ func mcpErrorResult(text string) *mcp.CallToolResult {
 		IsError: true,
 		Content: []mcp.Content{&mcp.TextContent{Text: text}},
 	}
+}
+
+// mcpToolTimeouts: long verbs get generous bounds. build = kaniko
+// (base ~8min measured); deploy/rollback = rollout waits; promote
+// re-runs its gate units (the journey corpus) before hopping.
+const (
+	mcpTimeoutBuild   = 15 * time.Minute
+	mcpTimeoutDeploy  = 10 * time.Minute
+	mcpTimeoutPromote = 15 * time.Minute
+)
+
+// mcpRegisterMutations installs the phase-2 mutation tools. Called ONLY
+// behind the explicit --mutations / FLEET_MUTATIONS=1 opt-in: a default
+// server never lists them (asserted by C22a and C22e). Every tool is a
+// thin self-exec wrapper — the CLI's gates (approvals, actor policy,
+// promote-time journey re-runs, critical-service refusals) are the real
+// enforcement and stay in the binary.
+func mcpRegisterMutations(srv *mcp.Server, root string) {
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "fleet_approve",
+		Description: "Write a stage approval file + journal line (fleet approve <component> <dev|prod> [who]). The actor policy applies: prod approvals are refused for actors outside allowed_actors (.fleet.yaml).",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in struct {
+		Component string `json:"component" jsonschema:"component name"`
+		Stage     string `json:"stage" jsonschema:"dev or prod"`
+		Who       string `json:"who,omitempty" jsonschema:"approving actor (defaults to FLEET_ACTOR or agent)"`
+	}) (*mcp.CallToolResult, any, error) {
+		if in.Component == "" || (in.Stage != "dev" && in.Stage != "prod") {
+			return mcpErrorResult("fleet_approve requires component and stage (dev|prod)"), nil, nil
+		}
+		argv := []string{"approve", in.Component, in.Stage}
+		if in.Who != "" {
+			argv = append(argv, in.Who)
+		}
+		return mcpRunText(ctx, root, mcpTimeoutPromote, argv)
+	})
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "fleet_promote",
+		Description: "Gated stage transition (fleet promote <component> <stage>). Re-runs the gate units — including the journey corpus — right now; refuses without the required approvals. Use dry_run=true to preview.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in struct {
+		Component string `json:"component" jsonschema:"component name"`
+		Stage     string `json:"stage" jsonschema:"target stage: dev|stage|prod"`
+		DryRun    bool   `json:"dry_run,omitempty" jsonschema:"preview the hop without executing"`
+	}) (*mcp.CallToolResult, any, error) {
+		if in.Component == "" || in.Stage == "" {
+			return mcpErrorResult("fleet_promote requires component and stage"), nil, nil
+		}
+		argv := []string{"promote", in.Component, in.Stage}
+		if in.DryRun {
+			argv = append(argv, "--dry-run")
+		}
+		return mcpRunText(ctx, root, mcpTimeoutPromote, argv)
+	})
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "ops_build",
+		Description: "Kaniko build of a site service (fleet ops build <service>). LONG: base images can take ~8 minutes. Journals BUILT + state.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in struct {
+		Service string `json:"service" jsonschema:"site service name"`
+		Site    string `json:"site,omitempty" jsonschema:"optional site name"`
+	}) (*mcp.CallToolResult, any, error) {
+		if in.Service == "" {
+			return mcpErrorResult("ops_build requires a service name"), nil, nil
+		}
+		argv := []string{"ops", "build"}
+		if in.Site != "" {
+			argv = append(argv, "--site", in.Site)
+		}
+		argv = append(argv, in.Service)
+		return mcpRunText(ctx, root, mcpTimeoutBuild, argv)
+	})
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "ops_deploy",
+		Description: "Deploy a site service: secrets+manifests+rollout+dns+tunnel+monitor+state (fleet ops deploy <service>). Journals DEPLOYED.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in struct {
+		Service string `json:"service" jsonschema:"site service name"`
+		Site    string `json:"site,omitempty" jsonschema:"optional site name"`
+	}) (*mcp.CallToolResult, any, error) {
+		if in.Service == "" {
+			return mcpErrorResult("ops_deploy requires a service name"), nil, nil
+		}
+		argv := []string{"ops", "deploy"}
+		if in.Site != "" {
+			argv = append(argv, "--site", in.Site)
+		}
+		argv = append(argv, in.Service)
+		return mcpRunText(ctx, root, mcpTimeoutDeploy, argv)
+	})
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "ops_rollback",
+		Description: "Roll a site service back to the previous tag (fleet ops rollback <service>) + state record.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in struct {
+		Service string `json:"service" jsonschema:"site service name"`
+		Site    string `json:"site,omitempty" jsonschema:"optional site name"`
+	}) (*mcp.CallToolResult, any, error) {
+		if in.Service == "" {
+			return mcpErrorResult("ops_rollback requires a service name"), nil, nil
+		}
+		argv := []string{"ops", "rollback"}
+		if in.Site != "" {
+			argv = append(argv, "--site", in.Site)
+		}
+		argv = append(argv, in.Service)
+		return mcpRunText(ctx, root, mcpTimeoutDeploy, argv)
+	})
 }

@@ -25,7 +25,16 @@ codes; the self-execed child gets an explicit env allowlist with
 
 - **Tools**: `fleet_status`, `fleet_doctor`, `fleet_next`, `fleet_check`,
   `fleet_sites`, `fleet_wo_list`, `fleet_wo_show`, `ops_status`,
-  `ops_doctor`, `ops_dns` (report form only).
+  `ops_doctor`, `ops_dns` (report form only), `ops_verify` (curl the
+  public URL).
+- **Phase 2 (mutations, explicit opt-in)**: `fleet mcp --mutations` or
+  `FLEET_MUTATIONS=1` in the client's server environment adds
+  `fleet_approve`, `fleet_promote` (dry_run supported), `ops_build`,
+  `ops_deploy`, `ops_rollback`. Registration-gated: a default server
+  never lists them. Every call executes the fleet CLI, so the actor
+  policy, approval gates, and promote-time journey re-runs enforce
+  everything; refusals arrive as `isError` with the exact fix.
+  Long verbs carry per-tool timeouts (build 15m, deploy/rollback 10m).
 - **Resources**: `fleet://lifecycle/journal`, `fleet://registry/projects`,
   `fleet://registry/state`, `fleet://registry/sites`,
   `fleet://lifecycle/gates`.

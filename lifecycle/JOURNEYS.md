@@ -37,6 +37,7 @@
 | `tests/C22b_mcp_secret_guard` | `fleet mcp` secrets | canary secret value never appears in any tool/resource output (negative control on disk) |
 | `tests/C22c_mcp_operator_journeys` | `fleet mcp` behavior | J1 triage; J2 incident drill (detect→pinpoint→route→fix→re-verify, no cross-tool drift); J3 context assembly; J4 pipelined client batching; J5 refusal UX; J6 permutation sweep (12 tool/arg shapes) |
 | `scripts/mcp-journey-live.sh` | live estate (tier 1) | same journeys against the REAL repo; read-only; PASS at session close |
+| `tests/C22e_mcp_mutation_refusals` | `fleet mcp --mutations` | mutation tools invisible by default + protocol-error on unregistered call; actor-policy prod refusal with exact fix; allowed-actor legal path; unknown-component/unknown-service refusals |
 
 ## Adding a journey for a new feature
 

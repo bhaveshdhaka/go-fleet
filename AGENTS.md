@@ -69,11 +69,15 @@ Two-file rule of this repo:
                                            # reconciles CNAMEs + tunnel (MUTATES CF)
     ./scripts/fleet ops monitor            # re-render gatus + dashboard (MUTATES CMs)
     ./scripts/fleet ops verify <svc> [--expect N]   # curl the public URL (read-only)
-    ./scripts/fleet mcp                    # stdio MCP server: READ-ONLY tools
-                                           # (status/doctor/next/check/site list/
-                                           # ops status|doctor|dns-report/wo) +
-                                           # contract-file resources; no mutating
-                                           # verb is reachable (WO-22 phase 1)
+    ./scripts/fleet mcp [--mutations]      # stdio MCP server: READ-ONLY by
+                                           # default (status/doctor/next/check/
+                                           # site list/ops status|doctor|dns|
+                                           # verify/wo + contract resources);
+                                           # --mutations or FLEET_MUTATIONS=1
+                                           # adds approve/promote/ops
+                                           # build|deploy|rollback — the CLI's
+                                           # actor policy + gates still enforce
+                                           # everything (WO-22)
     ./scripts/fleet wo list|show|new ...   # workorder surface (schema v1)
     ./scripts/fleet init [dir]             # scaffold the SDLC file skeleton
     ./scripts/fleet onboard <name>         # register component (+pipeline+state)

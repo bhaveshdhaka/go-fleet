@@ -21,6 +21,7 @@ gates:
       - C22b_mcp_secret_guard
       - C22c_mcp_operator_journeys
       - C22d_journey_tier_gate
+      - C22e_mcp_mutation_refusals
     needs_approvals:
       - dev
 
@@ -34,6 +35,7 @@ gates:
       - C22b_mcp_secret_guard
       - C22c_mcp_operator_journeys
       - C22d_journey_tier_gate
+      - C22e_mcp_mutation_refusals
     needs_approvals:
       - dev
       - prod

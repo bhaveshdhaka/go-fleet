@@ -40,8 +40,12 @@ const helpText = `fleet <command>
   ops <build|deploy|rollback|dns|monitor|remove|verify|register|update>
                                          site operations (mutations; WO-8
                                          dual-run PASSED, WO-9 fleet-managed)
-  mcp                                    stdio MCP server, READ-ONLY tools +
-                                         contract resources (WO-22 phase 1)
+  mcp [--mutations]                      stdio MCP server: READ-ONLY tools +
+                                         contract resources by default;
+                                         --mutations (or FLEET_MUTATIONS=1)
+                                         adds approve/promote/ops
+                                         build|deploy|rollback behind the
+                                         CLI's own gates (WO-22 phase 2)
   approve <component> <dev|prod> [who]   write approval file + journal
   promote <component> <to-stage> [...]   gated stage transition
   verify [units...]                      run the test corpus, journal the result
