@@ -148,3 +148,6 @@ ts=2026-08-29T09:18:29Z event=promoted component=fleethub from=stage to=prod act
 # verify ts=2026-08-30T04:55:52Z wo=WO-22 units=49 pass=82 fail=1 skip=41 result=FAIL
 # verify ts=2026-08-30T05:01:09Z wo=WO-22 units=49 pass=616 fail=0 skip=1 result=OK
 # verify ts=2026-08-30T05:19:34Z wo=WO-22 units=50 pass=636 fail=0 skip=1 result=OK
+# git push credential ts=2026-08-30T05:39:21Z live-source=openchamber github-auth.json accessToken (name only) helper=repo-local /root/.fleet/bin/git-credential-openchamber; secrets-home github.env GITHUB_TOKEN is REVOKED (401) — rotation/seeding owed by owner
+# verify ts=2026-08-30T06:30:58Z wo=WO-22 units=50 pass=641 fail=0 skip=1 result=OK
+# verify ts=2026-08-30T06:33:32Z wo=WO-22 units=50 pass=641 fail=0 skip=1 result=OK

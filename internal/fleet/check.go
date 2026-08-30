@@ -1,6 +1,7 @@
 package fleet
 
 import (
+	"regexp"
 	"fmt"
 	"os"
 	"os/exec"
@@ -8,7 +9,7 @@ import (
 	"strings"
 )
 
-// Predicates P1-P6 (WO-5): file-state checks over the SDLC process. They
+// Predicates P1-P7 (WO-5; P7 WO-22): file-state checks over the SDLC process. They
 // REPORT authoring drift with exact fix commands (enforcement-policy
 // decision in PLAN.md); the promote gates remain the only hard blocks.
 
@@ -91,7 +92,7 @@ func gitTreeDirty(root string) (dirty bool, notGit bool, err error) {
 	return false, false, nil
 }
 
-// RunPredicates evaluates P1-P6 against the repo rooted at p.
+// RunPredicates evaluates P1-P7 against the repo rooted at p.
 func RunPredicates(p Paths) []CheckResult {
 	var res []CheckResult
 	wos := loadWorkorders(filepath.Join(p.Root, "workorders"))
@@ -192,10 +193,45 @@ func RunPredicates(p Paths) []CheckResult {
 	default:
 		res = append(res, CheckResult{"P6", "PASS", "journal append-only discipline holds", ""})
 	}
+
+	// P7 journey coverage (WO-22, AGENTS rule 9 — permanent tier): active
+	// workorders must reference at least one journey unit in a piece
+	// verify, or declare journeys_exempt (docs/fixture-only changes).
+	bad7 := []string{}
+	for _, w := range wos {
+		if !w.isActive() || w.JourneysExempt {
+			continue
+		}
+		if !woReferencesJourney(p, w) {
+			bad7 = append(bad7, w.ID)
+		}
+	}
+	if len(bad7) > 0 {
+		res = append(res, CheckResult{"P7", "FAIL",
+			"active workorders without journey coverage: " + strings.Join(bad7, ","),
+			"add a journey unit to a piece verify (see lifecycle/JOURNEYS.md) or set journeys_exempt: true with a justification"})
+	} else {
+		res = append(res, CheckResult{"P7", "PASS", "active workorders carry journey coverage or are exempt", ""})
+	}
 	return res
 }
 
-// cmdCheck evaluates P1-P6 and prints the machine-parse report.
+// woReferencesJourney reports whether any piece verify of w names a
+// corpus unit whose run.sh sources the shared journey library (rule 9).
+func woReferencesJourney(p Paths, w Workorder) bool {
+	unitRe := regexp.MustCompile(`C[0-9][0-9A-Za-z_]*`)
+	for _, piece := range w.Pieces {
+		for _, u := range unitRe.FindAllString(piece.Verify, -1) {
+			b, err := os.ReadFile(filepath.Join(p.Tests, u, "run.sh"))
+			if err == nil && strings.Contains(string(b), "tests/lib/journey.sh") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// cmdCheck evaluates P1-P7 and prints the machine-parse report.
 func cmdCheck(args []string) int {
 	p, rc := mustPaths()
 	if rc != 0 {

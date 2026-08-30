@@ -10,7 +10,7 @@ from source when stale). Run `fleet --help` for the full list.
 | `status [component]` | `STATUS component=… kind=… stage=…` + `STATUS SUMMARY components=N` | `{"components":[{component,kind,stage}]}` |
 | `doctor` | `DOCTOR OK|FAIL checked_components=N issues=M` (+ `DOCTOR ISSUE :: …`) | `{"ok":bool,"issues":[...]}` |
 | `next` | `NEXT action=…` + `NEXT reason=…` (+ `NEXT predicate=`) | `{"action":…,"reason":…[,"predicate":…]}` |
-| `check` | `CHECK P<n> PASS|FAIL|SKIP detail=…` + `CHECK SUMMARY total=6 pass=N fail=M` | `{"predicates":[...],"total","pass","fail","skip"}` |
+| `check` | `CHECK P<n> PASS|FAIL|SKIP detail=…` + `CHECK SUMMARY total=7 pass=N fail=M` | `{"predicates":[...],"total","pass","fail","skip"}` |
 | `site list` | `SITE LIST count=N` + `SITE name=… engine=… access=… lab_root=…` | `{"sites":[{name,engine,access,lab_root}]}` |
 | `ops status [--site S]` | table (`=== cluster ===` / pods / services) | `{"site":…,"cluster":bool,"services":[...]}` |
 | `ops doctor [--site S]` | check lines + `DOCTOR: N problem(s) found` | array of `{check,ok,detail,status}` |

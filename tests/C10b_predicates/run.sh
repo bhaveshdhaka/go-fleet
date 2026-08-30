@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# C10b — predicates P1-P6 (WO-5) against a real git scratch repo.
+# C10b — predicates P1-P7 (WO-5; P7 WO-22) against a real git scratch repo.
 # Every predicate is driven to FAIL and back to PASS; the scenario controls
 # the copied WO-5's status explicitly so it never depends on live state.
 # Nothing outside the scratch copy is touched.
@@ -106,9 +106,20 @@ line="$(getline "$(check)" '^CHECK P6 ')"
 { [[ "$line" == "CHECK P6 PASS"* ]]; } \
   && report_pass "P6 passes on append-only journal" || report_fail "P6 passes on append-only journal" "$line"
 
+# P7: active WO without a journey ref -> FAIL; journeys_exempt -> PASS
+# (WO-5 is IN_PROGRESS here with a journaled verify but verify fields
+# name no journey unit — exactly the drift P7 reports; rule 9)
+line="$(getline "$(check)" '^CHECK P7 ')"
+{ [[ "$line" == "CHECK P7 FAIL"* ]]; } \
+  && report_pass "P7 fails on active WO without journey coverage" || report_fail "P7 fails on active WO without journey coverage" "$line"
+sed -i 's/^plan: PLAN.md$/plan: PLAN.md\njourneys_exempt: true/' "$repo/workorders/WO-5.md"
+line="$(getline "$(check)" '^CHECK P7 ')"
+{ [[ "$line" == "CHECK P7 PASS"* ]]; } \
+  && report_pass "P7 passes with journeys_exempt" || report_fail "P7 passes with journeys_exempt" "$line"
+
 # summary line + rc discipline
 out="$(check)"
-assert_contains "check summary present" "CHECK SUMMARY total=6" "$out"
+assert_contains "check summary present" "CHECK SUMMARY total=7" "$out"
 FLEET_ROOT="$repo" "$F" check >/dev/null 2>&1
 assert_eq "check rc=0 when clean" 0 "$?"
 

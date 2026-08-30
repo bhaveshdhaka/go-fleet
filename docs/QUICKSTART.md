@@ -16,7 +16,7 @@ mkdir -p ~/workspaces && cd ~/workspaces
 git clone https://github.com/bhaveshdhaka/go-fleet fleet && cd fleet
 ./install.sh                 # pinned toolchain -> ./.toolchain
 bash scripts/test.sh         # expect: FLEET SUMMARY ... fail=0
-./scripts/fleet check        # expect: CHECK SUMMARY total=6 pass=6
+./scripts/fleet check        # expect: CHECK SUMMARY total=7 pass=7
 ```
 
 ## 1. Stand up the cluster (or point at one)

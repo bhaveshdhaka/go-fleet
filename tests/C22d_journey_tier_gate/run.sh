@@ -51,4 +51,16 @@ assert_contains "AGENTS.md rule 9 (journeys ship with features)" \
 assert_contains "AGENTS.md rule 9 (refusal journeys for mutations)" \
   "refusal journeys" "$(cat "$FLEET_ROOT/AGENTS.md")"
 
+# 5. the TEETH: journeys gate promotion (gates.yaml re-runs them on every
+# hop) and check carries the P7 predicate
+GATES_YAML="$FLEET_ROOT/lifecycle/gates.yaml"
+for u in C22a_mcp_stdio C22c_mcp_operator_journeys; do
+  n="$(grep -c "      - $u\$" "$GATES_YAML" 2>/dev/null)"
+  [[ "$n" -ge 2 ]] \
+    && report_pass "journeys gate promotion: $u on both gated hops" \
+    || report_fail "journeys gate promotion: $u on both gated hops" "count=$n (want >=2)"
+done
+assert_contains "check carries the P7 journey predicate" \
+  "P7" "$(cat "$FLEET_ROOT/internal/fleet/check.go")"
+
 finalize

@@ -12,7 +12,7 @@ Two-file rule of this repo:
     ./scripts/fleet doctor                 # READ-ONLY drift check; run FIRST
                                            # whenever anything looks wrong
     ./scripts/fleet next                   # READ-ONLY guidance: next legal action
-    ./scripts/fleet check                  # READ-ONLY predicates P1-P6 report
+    ./scripts/fleet check                  # READ-ONLY predicates P1-P7 report
     ./scripts/fleet site list              # READ-ONLY managed sites registry
     ./scripts/fleet site new <name> [--domain D] [--dry-run]
                                            # scaffold a NEW fleet-managed site:
@@ -125,7 +125,7 @@ spine.
    require_human_stages (default prod) are refused for actors outside
    allowed_actors. Middle hops stay auto-approvable as FLEET_ACTOR=agent.
    Workorder authoring drift is reported by `./scripts/fleet check` /
-   `next` (predicates P1-P6) with exact fix commands — it does not block;
+   `next` (predicates P1-P7) with exact fix commands — it does not block;
    the promote gates remain the only hard blocks.
 9. Journey tier (WO-22, permanent — doctrine: lifecycle/JOURNEYS.md):
    every user-facing feature ships its JOURNEY unit (a user story driven

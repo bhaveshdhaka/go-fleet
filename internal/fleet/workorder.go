@@ -32,6 +32,11 @@ type Workorder struct {
 	Path   string
 	Pieces []WOPiece
 	Schema int
+	// JourneysExempt (rule 9 / predicate P7): set to true only for
+	// workorders with no user-facing surface (docs, fixture-only tests).
+	// P7 flags active workorders that neither reference a journey unit
+	// nor carry this exemption.
+	JourneysExempt bool
 }
 
 func validWOStatus(s string) bool {
@@ -121,6 +126,8 @@ func (w *Workorder) parseFrontMatter(lines []string) {
 				w.Status = val
 			case "plan":
 				w.Plan = val
+			case "journeys_exempt":
+				w.JourneysExempt = val == "true"
 			}
 		}
 	}

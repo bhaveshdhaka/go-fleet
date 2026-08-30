@@ -22,8 +22,15 @@ scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
 JQ="$scratch/jsonq"
 
-# jsonq (stdlib-only) for payload assertions
+# jsonq (stdlib-only) for payload assertions — resolve go the way the
+# repo always does: explicit prefix first, then the pinned toolchain in
+# the repo (no ambient-PATH dependence, pod or host)
 GO_BIN="${FLEET_TOOLCHAIN_PREFIX:-}/bin/go"
+if [[ ! -x "$GO_BIN" ]]; then
+  for cand in "$FLEET_ROOT/.toolchain/bin/go" "$FLEET_ROOT/.toolchain/src/go/bin/go"; do
+    [[ -x "$cand" ]] && { GO_BIN="$cand"; break; }
+  done
+fi
 [[ -x "$GO_BIN" ]] || GO_BIN="$(command -v go)"
 ( cd "$FLEET_ROOT" && GOPROXY=off GOFLAGS=-mod=vendor GOTOOLCHAIN=local CGO_ENABLED=0 \
     "$GO_BIN" build -trimpath -o "$JQ" tests/lib/jsonq.go ) || {

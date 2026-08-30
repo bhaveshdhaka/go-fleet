@@ -19,7 +19,7 @@ const helpText = `fleet <command>
   status [component] [--json]            read-only snapshot
   doctor [--json]                        read-only drift check
   next [--json]                          read-only guidance: next legal action
-  check [--json]                         read-only predicates P1-P6 report
+  check [--json]                         read-only predicates P1-P7 report
   registry-check                         alias of doctor for CI gates
   wo <list|show|new> [...]               workorder surface (schema v1)
   init [dir]                             scaffold the SDLC file skeleton

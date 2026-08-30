@@ -51,3 +51,14 @@
    C22d. If it's a live-tier story, add it to the matching
    `scripts/*-journey-*.sh` driver.
 5. `bash scripts/test.sh` — the corpus runs it every time from now on.
+
+## Enforcement (teeth, not prose)
+
+- **gates.yaml**: the C22 journey units sit in `requires_units` on
+  `dev→stage` and `stage→prod` — every promote RE-RUNS the journeys at
+  that moment (hard block; asserted by C22d).
+- **P7 predicate** (`fleet check`/`next`): an active workorder whose
+  pieces reference no journey unit is flagged with the exact fix; the
+  only opt-out is `journeys_exempt: true` with a justification (docs/
+  fixture-only changes). Enforcement stays at promote, per house policy;
+  P7 is the visible drift report agents parse mid-session.

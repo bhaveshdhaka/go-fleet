@@ -17,6 +17,10 @@ gates:
     requires_units:
       - C3c_build_reproducible
       - C4a_deploy_static
+      - C22a_mcp_stdio
+      - C22b_mcp_secret_guard
+      - C22c_mcp_operator_journeys
+      - C22d_journey_tier_gate
     needs_approvals:
       - dev
 
@@ -26,6 +30,10 @@ gates:
       - C3c_build_reproducible
       - C4a_deploy_static
       - C6c_webapp_contract
+      - C22a_mcp_stdio
+      - C22b_mcp_secret_guard
+      - C22c_mcp_operator_journeys
+      - C22d_journey_tier_gate
     needs_approvals:
       - dev
       - prod

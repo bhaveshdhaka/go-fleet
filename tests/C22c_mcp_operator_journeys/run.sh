@@ -93,7 +93,7 @@ plan: PLAN.md
 pieces:
   - id: 1
     title: fixture piece
-    verify: tests/C1a
+    verify: tests/C22a
     integrated: false
 ---
 
@@ -101,6 +101,11 @@ pieces:
 
 Body text for the context-assembly journey.
 EOF
+
+# the fixture carries the journey unit WO-2 references — the REAL P7 pass
+# path (verify names a unit whose run.sh sources the journey library)
+mkdir -p "$repo/tests/C22a"
+printf '#!/usr/bin/env bash\nsource "$FLEET_ROOT/tests/lib/journey.sh"\n' > "$repo/tests/C22a/run.sh"
 
 # --- session plumbing: SHARED journey library (AGENTS rule 9)
 source "$FLEET_ROOT/tests/lib/journey.sh"
