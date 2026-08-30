@@ -77,7 +77,10 @@ sed -i -e "s|lab_root: .*|lab_root: $lab|" \
        -e "s|^    access: .*|    access: kubeconfig:$scratch/kubeconfig|" \
        "$repo/ops/SITES.yaml"
 
-run() { PATH="$scratch/bin:$PATH" FLEET_ROOT="$repo" "$F" "$@" 2>&1; }
+# hermetic PATH: fake kubectl ONLY — the ambient PATH leaks the real k3s
+# (which answers `k3s crictl images` on cluster hosts and flips the
+# builder check from SKIP to a real answer; measured 2026-08-29)
+run() { PATH="$scratch/bin:/usr/bin:/bin" FLEET_ROOT="$repo" "$F" "$@" 2>&1; }
 
 o="$(run ops status)"
 assert_contains "status: services table renders fixture row" "alpha" "$o"

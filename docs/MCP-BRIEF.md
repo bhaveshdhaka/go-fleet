@@ -59,6 +59,7 @@ drivable from ANY MCP client while the prod gate stays binary-enforced.
 Then list in the official MCP Registry. Pitch: *"the agent-operated
 release factory any AI client can drive, with human gates that hold."*
 
+
 ## 4. Honest risks
 
 - Spec velocity: July revision deprecated Roots/Sampling — pin the SDK.
@@ -74,3 +75,36 @@ release factory any AI client can drive, with human gates that hold."*
    Tasks extension for build/deploy — **PARKED**
 3. Streamable HTTP + Cloudflare Access behind the customer tunnel,
    official registry listing, docs — **PARKED**
+
+## 6. How this is tested (tiered, like everything else in fleet)
+
+| Tier | What proves it | Status |
+|---|---|---|
+| 0 — wire contract | C22a: handshake, exact read-only tool set, structured content, honest isError mapping, clean EOF. C22b: canary secret value never appears in any output (negative control on disk). | corpus-green |
+| 0 — journeys | C22c: operator user stories, not protocol probes — morning triage; **incident drill** (break state → agent DETECTS via doctor, PINPOINTS via issue text, gets ROUTED by next, fix, re-verify, cross-tool no-drift); context assembly for a handoff (wo list/show + journal resource); **pipelined client batching** (three calls fired without waiting); refusal UX (actionable error text). | corpus-green |
+| 1 — live estate | `scripts/mcp-journey-live.sh`: the same journeys against the REAL repo over the real stdio surface — status/doctor/next/wo/journal/ops_status on the live site. Read-only by construction. | run at close, PASS |
+| 2 — real client | Wire an actual MCP client (below) and run the same journeys conversationally; the owner's daily-driver use is the acceptance test. | owner wiring |
+| 3 — phase 2/3 acceptance (when built) | gate-refusal journeys (agent ATTEMPTS `promote` without approval → refused with fix command, journaled), actor-policy impersonation (FLEET_ACTOR forging must not pass prod gates), Tasks long-build journeys with progress + cancel, staging tenant behind Cloudflare Access with a real remote client BEFORE registry listing. | parked with phases 2–3 |
+
+Phase-2 mutations MUST ship with their journey unit in the same change —
+a mutation tool without a refusal journey does not pass `check`.
+
+## 7. Wiring a real client (phase 1, stdio)
+
+opencode (`~/.config/opencode/opencode.json` or project `opencode.json`):
+
+```json
+{ "mcp": { "fleet": { "type": "local",
+    "command": ["<absolute-path>/dist/fleet", "mcp"],
+    "enabled": true } } }
+```
+
+Claude Code:
+
+```bash
+claude mcp add fleet -- <absolute-path>/dist/fleet mcp
+```
+
+Any generic client: command `<absolute-path>/dist/fleet`, args `["mcp"]`,
+transport stdio. The binary pins FLEET_ROOT itself (or honors the
+client-provided `FLEET_ROOT` env); no ambient credentials are consulted.
