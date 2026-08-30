@@ -159,6 +159,70 @@ func min(a, b int) int {
 // TestLabStateParity asserts the state-file byte format against the
 // frozen json.dump(indent=2, sort_keys=True) references for the three
 // recorders.
+// TestStaticIngressRules guards the host-network upstream seam (2026-08-30
+// openchamber cutover regression): static rules must join the tunnel
+// ingress render and the doctor/ops-dns want-set, or every ops mutation
+// silently wipes the manual rule again as "extra" drift.
+func TestStaticIngressRules(t *testing.T) {
+	scratch := t.TempDir()
+	copyDir(t, labFix, scratch)
+	t.Setenv("FLEET_SECRETS_HOME", scratch)
+	if err := os.MkdirAll(filepath.Join(scratch, "fix"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(scratch, "fix", "alpha.env"), []byte("ALPHA_KEY=dummy\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	site := Site{Name: "fix", Engine: "sos-lab", LabRoot: scratch, Namespace: "sos-lab", Access: "in-cluster"}
+	lv, err := LoadLabView(site, scratch)
+	if err != nil {
+		t.Fatalf("LoadLabView: %v", err)
+	}
+
+	static := lv.StaticIngressRules()
+	if len(static) != 1 || static[0]["hostname"] != "fixhost.example.test" ||
+		static[0]["service"] != "http://192.0.2.10:9999" {
+		t.Fatalf("StaticIngressRules = %v", static)
+	}
+
+	hosts := lv.TunnelIngressHosts()
+	if !hosts["alpha.example.test"] || !hosts["fixhost.example.test"] {
+		t.Fatalf("TunnelIngressHosts = %v", hosts)
+	}
+
+	ingress := renderLabTunnelIngress(lv)
+	found := false
+	for _, rAny := range ingress {
+		r := rAny.(map[string]any)
+		if r["hostname"] == "fixhost.example.test" && r["service"] == "http://192.0.2.10:9999" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("renderLabTunnelIngress missing static rule: %v", ingress)
+	}
+
+	// the terminating catch-all must stay appended by PutTunnelConfig,
+	// never baked into the render
+	for _, rAny := range ingress {
+		if rAny.(map[string]any)["hostname"] != nil {
+			continue
+		}
+		t.Fatalf("catch-all leaked into render: %v", ingress)
+	}
+
+	// malformed entries are skipped, not fatal
+	lv.Registry["cloudflare"].(map[string]any)["static_ingress"] = []any{
+		map[string]any{"hostname": "only-host.example.test"},
+		map[string]any{"service": "http://192.0.2.11:80"},
+		map[string]any{"hostname": "ok.example.test", "service": "http://192.0.2.12:80"},
+		"garbage",
+	}
+	if got := len(lv.StaticIngressRules()); got != 1 {
+		t.Fatalf("malformed static rules not filtered: got %d, want 1", got)
+	}
+}
+
 func TestLabStateParity(t *testing.T) {
 	now := time.Date(2026, 8, 27, 12, 34, 56, 0, time.UTC)
 	t.Setenv("SOS_LAB_NODE", "hk-03-dev")

@@ -2,6 +2,13 @@ cloudflare:
   account_id: f04fa041640e4096493366f32948663a
   tunnel_id: 50e0d13b-d404-4a3d-b4bf-27c373bf97e0
   tunnel_name: hk-03-dev-tunnel
+  static_ingress:
+    # openchamber cutover 2026-08-30: systemd service on the host, no
+    # in-cluster Service. Registry entry below stays enabled:false (Day-N
+    # unregister pending owner); this rule keeps the UI routed and makes
+    # ops deploys PRESERVE it instead of wiping it as "extra".
+    - hostname: oc.bhavesh.hk
+      service: http://202.73.4.149:3000
 domains:
   bhavesh.hk:
     zone_id: 49d72a4ea4425dacaa3a76e91e044388
@@ -41,6 +48,15 @@ projects:
     services:
     - 1edge
     - 1edge-mocks
+tenants:
+  manish:
+    namespace: friend-manish
+    oc_host: manish-oc.bhavesh.hk
+    host_suffix: bhavesh.hk
+    host_prefix: manish-
+    project: manish-app
+    app: manish-app
+
 services:
   openchamber:
     repo: openchamber
@@ -202,6 +218,25 @@ services:
     enabled: false
     repo: fleet/apps/dashboard-render
     critical: true
+  manish-openchamber:
+    namespace: friend-manish
+    port: 3000
+    enabled: false
+    tenant: manish
+    host: manish-oc.bhavesh.hk
+    repo: openchamber
+    runAsUser: 1000
+    args:
+    - openchamber
+    - serve
+    - --foreground
+    secrets:
+    - OPENCHAMBER_UI_PASSWORD
+    env:
+      OPENCHAMBER_HOST: 0.0.0.0
+    storage:
+      size: 10Gi
+      mount: /home/openchamber
 backup:
   bucket: hk-03-backup
   endpoint: https://f04fa041640e4096493366f32948663a.r2.cloudflarestorage.com

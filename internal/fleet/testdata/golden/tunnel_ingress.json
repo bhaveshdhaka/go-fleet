@@ -2,5 +2,9 @@
   {
     "hostname": "alpha.example.test",
     "service": "http://alpha.sos-lab.svc.cluster.local:8080"
+  },
+  {
+    "hostname": "fixhost.example.test",
+    "service": "http://192.0.2.10:9999"
   }
 ]

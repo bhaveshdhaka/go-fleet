@@ -22,8 +22,8 @@ func labRegistryHost(ns string) string {
 }
 
 const (
-	LabKanikoImage  = "gcr.io/kaniko-project/executor:v1.23.2"
-	LabKubeVersion  = "v1.36.3" // labctl KUBE_VERSION (overlay build-arg)
+	LabKanikoImage = "gcr.io/kaniko-project/executor:v1.23.2"
+	LabKubeVersion = "v1.36.3" // labctl KUBE_VERSION (overlay build-arg)
 )
 
 type LabView struct {
@@ -95,6 +95,12 @@ func validateLabRegistry(reg map[string]any) error {
 			return fmt.Errorf("registry.yaml: cloudflare.%s required", k)
 		}
 	}
+	tenants := asMap(reg["tenants"])
+	for name, tenantAny := range tenants {
+		if err := validateTenant(name, asMap(tenantAny)); err != nil {
+			return err
+		}
+	}
 	for name, svcAny := range asMap(reg["services"]) {
 		svc := asMap(svcAny)
 		if svc == nil {
@@ -115,6 +121,15 @@ func validateLabRegistry(reg map[string]any) error {
 				return fmt.Errorf("service '%s': enabled must be a boolean", name)
 			}
 		}
+		if tenantName := asString(svc["tenant"]); tenantName != "" {
+			tenant := asMap(tenants[tenantName])
+			if tenant == nil {
+				return fmt.Errorf("service '%s': unknown tenant '%s'", name, tenantName)
+			}
+			if err := validateTenantService(name, svc, tenantName, tenant); err != nil {
+				return err
+			}
+		}
 	}
 	for dom, cfgAny := range asMap(reg["domains"]) {
 		if asString(asMap(cfgAny)["zone_id"]) == "" {
@@ -125,6 +140,12 @@ func validateLabRegistry(reg map[string]any) error {
 }
 
 // LabServices returns the services map.
+// Tenant returns a validated tenant contract from the optional site registry tenants map.
+func (lv *LabView) Tenant(name string) (map[string]any, bool) {
+	t := asMap(asMap(lv.Registry["tenants"])[name])
+	return t, t != nil
+}
+
 func (lv *LabView) LabServices() map[string]map[string]any {
 	out := map[string]map[string]any{}
 	for name, svcAny := range asMap(lv.Registry["services"]) {
@@ -162,6 +183,47 @@ func (lv *LabView) RoutedServices() []struct {
 				Svc  map[string]any
 			}{name, svc})
 		}
+	}
+	return out
+}
+
+// StaticIngressRules mirrors registry.cloudflare.static_ingress: tunneled
+// host-network upstreams that are NOT backed by an in-cluster Service
+// (e.g. systemd services on the host — openchamber since the 2026-08-30
+// cutover). Each rule is {hostname, service}; entries missing either
+// field are skipped. These join the routed services everywhere the
+// tunnel ingress is rendered or compared.
+func (lv *LabView) StaticIngressRules() []map[string]any {
+	var out []map[string]any
+	list, ok := asMap(lv.Registry["cloudflare"])["static_ingress"].([]any)
+	if !ok {
+		return out
+	}
+	for _, rAny := range list {
+		r := asMap(rAny)
+		if r == nil {
+			continue
+		}
+		host := asString(r["hostname"])
+		svc := asString(r["service"])
+		if host == "" || svc == "" {
+			continue
+		}
+		out = append(out, map[string]any{"hostname": host, "service": svc})
+	}
+	return out
+}
+
+// TunnelIngressHosts mirrors registry.tunnel_ingress want-set: routed
+// service hosts plus static rule hostnames — the host set doctor and
+// `ops dns` compare the live tunnel ingress against.
+func (lv *LabView) TunnelIngressHosts() map[string]bool {
+	out := map[string]bool{}
+	for _, rs := range lv.RoutedServices() {
+		out[asString(rs.Svc["host"])] = true
+	}
+	for _, r := range lv.StaticIngressRules() {
+		out[asString(r["hostname"])] = true
 	}
 	return out
 }

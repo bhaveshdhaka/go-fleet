@@ -152,3 +152,7 @@ ts=2026-08-29T09:18:29Z event=promoted component=fleethub from=stage to=prod act
 # verify ts=2026-08-30T06:30:58Z wo=WO-22 units=50 pass=641 fail=0 skip=1 result=OK
 # verify ts=2026-08-30T06:33:32Z wo=WO-22 units=50 pass=641 fail=0 skip=1 result=OK
 # verify ts=2026-08-30T07:09:06Z wo=WO-22 units=51 pass=660 fail=0 skip=1 result=OK
+# mcp tier-2 acceptance ts=2026-08-30T08:27:02Z client=opencode-restarted tools=status,doctor,next,sites,ops_status,ops_verify all-answered mutations=absent(read-only-default) result=OK
+# verify ts=2026-08-30T11:54:14Z wo=WO-23 units=2 pass=18 fail=0 skip=0 result=OK
+# tenant-new wo=WO-23 site=hk-03-dev tenant=manish namespace=friend-manish project=manish-app
+# fix ts=2026-08-30T13:45:00Z regression=oc.bhavesh.hk-404 root_cause="ops deploy arjun-hk (12:56Z, ses_fad857462ffelT06B2YF7bUtSq) re-rendered tunnel ingress from registry and wiped the manual oc rule — cutover session had added it via raw CF API PUT (fleet had no non-service target verb); every subsequent ops mutation re-wiped it" fix="first-class cloudflare.static_ingress in registry + renderer + doctor/ops-dns want-set (lab.go StaticIngressRules/TunnelIngressHosts, labrender.go, ops.go, opsmutate.go, sitenew.go hint; corpus labfix + golden tunnel_ingress.json + TestStaticIngressRules); oc rule restored via ./scripts/fleet ops dns --apply; doctor now matches registry (no extra/missing)" evidence="corpus 53u pass=678 fail=0 skip=1; oc.bhavesh.hk -> 200; HANDOVER updated"

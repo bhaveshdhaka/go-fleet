@@ -242,6 +242,15 @@ func opsDeploy(oc *opsContext, args []string) int {
 		if errTxt := oc.lv.CheckSecrets(name, svc, oc.p.Root); errTxt != "" {
 			return opError(fmt.Errorf("%s: %s", name, errTxt))
 		}
+		if tenantName := asString(svc["tenant"]); tenantName != "" {
+			tenant, ok := oc.lv.Tenant(tenantName)
+			if !ok {
+				return opError(fmt.Errorf("service '%s': unknown tenant '%s'", name, tenantName))
+			}
+			if err := validateTenantService(name, svc, tenantName, tenant); err != nil {
+				return opError(err)
+			}
+		}
 		image, err := labServiceImage(oc.lv, name, svc)
 		if err != nil {
 			return opError(err)
@@ -284,7 +293,20 @@ func (oc *opsContext) deployOne(r *kubectlRunner, name string, svc map[string]an
 			return err
 		}
 	}
-	docs := renderLabService(oc.lv, oc.p.Root, name, svc, image)
+	var docs []any
+	if tenantName := asString(svc["tenant"]); tenantName != "" {
+		tenant, ok := oc.lv.Tenant(tenantName)
+		if !ok {
+			return fmt.Errorf("service '%s': unknown tenant '%s'", name, tenantName)
+		}
+		var err error
+		docs, err = renderTenantService(oc.lv, oc.p.Root, name, svc, image, tenant)
+		if err != nil {
+			return err
+		}
+	} else {
+		docs = renderLabService(oc.lv, oc.p.Root, name, svc, image)
+	}
 	if err := applyLabDocs(r, docs); err != nil {
 		return err
 	}
@@ -423,10 +445,7 @@ func opsDNS(oc *opsContext, args []string, jsonMode bool) int {
 	if err != nil {
 		return opError(err)
 	}
-	wantSet := map[string]bool{}
-	for _, rs := range routed {
-		wantSet[asString(rs.Svc["host"])] = true
-	}
+	wantSet := oc.lv.TunnelIngressHosts()
 	liveSet := map[string]bool{}
 	for _, h := range liveIngress {
 		liveSet[h] = true
@@ -727,6 +746,8 @@ func atoiStrict(s string) (int, bool) {
 // storage/mounts/resources/probePath/runAsUser/serviceAccount/args.
 type registerSpec struct {
 	name, host, image, repo, dockerfile string
+	tenant                              string
+	namespaceSet                        bool
 	port                                int
 	ns                                  string
 	secrets, envPairs                   []string
@@ -758,7 +779,9 @@ func opsRegister(oc *opsContext, args []string) int {
 				}
 				spec.port = n
 			case "--namespace":
-				spec.ns = a
+				spec.ns, spec.namespaceSet = a, true
+			case "--tenant":
+				spec.tenant = a
 			case "--image":
 				spec.image = a
 			case "--repo":
@@ -820,7 +843,7 @@ func opsRegister(oc *opsContext, args []string) int {
 			continue
 		}
 		switch a {
-		case "--host", "--port", "--namespace", "--image", "--repo", "--dockerfile", "--secret", "--env",
+		case "--host", "--port", "--namespace", "--tenant", "--image", "--repo", "--dockerfile", "--secret", "--env",
 			"--probe-path", "--run-as-user", "--service-account", "--args", "--mem", "--cpu", "--storage",
 			"--mount-sub", "--mount-host":
 			expectVal = true
@@ -840,7 +863,7 @@ func opsRegister(oc *opsContext, args []string) int {
 	spec.secrets, spec.envPairs = secrets, envPairs
 	if spec.name == "" || spec.port == 0 {
 		return opError(fmt.Errorf(
-			"usage: fleet ops register <name> --port <1-65535> [--host H] [--namespace NS] [--image IMG|--repo DIR] [--secret KEY]... [--env K=V]... [--probe-path /P] [--run-as-user UID] [--service-account SA] [--args A]... [--mem REQ[:LIM]] [--cpu REQ[:LIM]] [--storage SIZE[:MOUNT]] [--mount-sub NAME:/PATH]... [--mount-host /SRC:/DST]..."))
+			"usage: fleet ops register <name> --port <1-65535> [--host H] [--namespace NS] [--tenant TENANT] [--image IMG|--repo DIR] [--secret KEY]... [--env K=V]... [--probe-path /P] [--run-as-user UID] [--service-account SA] [--args A]... [--mem REQ[:LIM]] [--cpu REQ[:LIM]] [--storage SIZE[:MOUNT]] [--mount-sub NAME:/PATH]... [--mount-host /SRC:/DST]..."))
 	}
 	if !siteNameRe.MatchString(spec.name) {
 		return opError(fmt.Errorf("service name must match %s", siteNameRe.String()))
@@ -850,6 +873,23 @@ func opsRegister(oc *opsContext, args []string) int {
 	}
 	if spec.image == "" && spec.repo == "" {
 		return opError(fmt.Errorf("service '%s': needs --image or --repo", spec.name))
+	}
+	if spec.tenant != "" {
+		tenant, ok := oc.lv.Tenant(spec.tenant)
+		if !ok {
+			return opError(fmt.Errorf("unknown tenant '%s'", spec.tenant))
+		}
+		if spec.namespaceSet && spec.ns != asString(tenant["namespace"]) {
+			return opError(fmt.Errorf("tenant '%s' requires namespace '%s'", spec.tenant, asString(tenant["namespace"])))
+		}
+		spec.ns = asString(tenant["namespace"])
+		candidate := map[string]any{"namespace": spec.ns, "host": spec.host, "runAsUser": spec.runAsUser}
+		for _, m := range spec.mountHosts {
+			candidate["mounts"] = append(asList(candidate["mounts"]), map[string]any{"host": m[0], "path": m[1]})
+		}
+		if err := validateTenantService(spec.name, candidate, spec.tenant, tenant); err != nil {
+			return opError(err)
+		}
 	}
 	if err := labRegistryAppendService(oc.labRoot, spec); err != nil {
 		return opError(err)
@@ -1046,6 +1086,9 @@ func labRegistryAppendService(labRoot string, s registerSpec) error {
 	fmt.Fprintf(&b, "    namespace: %s\n", s.ns)
 	fmt.Fprintf(&b, "    port: %d\n", s.port)
 	fmt.Fprintf(&b, "    enabled: false\n")
+	if s.tenant != "" {
+		fmt.Fprintf(&b, "    tenant: %s\n", s.tenant)
+	}
 	if s.host != "" {
 		fmt.Fprintf(&b, "    host: %s\n", s.host)
 	}
@@ -1125,7 +1168,27 @@ func labRegistryAppendService(labRoot string, s registerSpec) error {
 			}
 		}
 	}
-	out := append(append([]string{}, lines...), strings.Split(strings.TrimSuffix(b.String(), "\n"), "\n")...)
+	servicesAt := -1
+	for i, line := range lines {
+		if line == "services:" {
+			servicesAt = i
+			break
+		}
+	}
+	if servicesAt < 0 {
+		return fmt.Errorf("registry.yaml has no services section")
+	}
+	insertAt := len(lines)
+	for i := servicesAt + 1; i < len(lines); i++ {
+		line := lines[i]
+		if len(line) > 0 && line[0] != ' ' && strings.HasSuffix(line, ":") {
+			insertAt = i
+			break
+		}
+	}
+	out := append([]string{}, lines[:insertAt]...)
+	out = append(out, strings.Split(strings.TrimSuffix(b.String(), "\n"), "\n")...)
+	out = append(out, lines[insertAt:]...)
 	return labRegistryRewrite(labRoot, out, func(reg map[string]any) error {
 		svc := asMap(asMap(reg["services"])[s.name])
 		if svc == nil {

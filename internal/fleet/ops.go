@@ -325,10 +325,7 @@ func opsDoctor(lv *LabView, r *kubectlRunner, root string, jsonMode bool) int {
 	}
 
 	routed := lv.RoutedServices()
-	wantHosts := map[string]bool{}
-	for _, rs := range routed {
-		wantHosts[asString(rs.Svc["host"])] = true
-	}
+	wantHosts := lv.TunnelIngressHosts()
 	var liveIngress []string
 	if tokenErr == nil {
 		liveIngress, _ = TunnelIngress(token, asString(cfCfg["account_id"]), asString(cfCfg["tunnel_id"]))

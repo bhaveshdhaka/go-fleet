@@ -438,6 +438,11 @@ func renderLabTunnelIngress(lv *LabView) []any {
 			"service":  fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", rs.Name, ns, asInt(rs.Svc["port"])),
 		})
 	}
+	// static host-network upstreams (registry.cloudflare.static_ingress) —
+	// same tunnel, no in-cluster Service behind them.
+	for _, r := range lv.StaticIngressRules() {
+		out = append(out, r)
+	}
 	return out
 }
 

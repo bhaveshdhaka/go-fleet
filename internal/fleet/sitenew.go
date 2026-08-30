@@ -191,6 +191,8 @@ func siteNewRegistry(name, domain string) string {
 	b.WriteString("  account_id: TODO_ACCOUNT_ID\n")
 	b.WriteString("  tunnel_id: TODO_SITE_TUNNEL_CREATE\n")
 	b.WriteString("  tunnel_name: " + name + "\n")
+	b.WriteString("  # static_ingress: tunneled host-network upstreams (no in-cluster\n")
+	b.WriteString("  # Service), e.g. [{hostname: ui." + domain + ", service: http://HOST_IP:3000}]\n")
 	b.WriteString("domains:\n")
 	if domain != "" {
 		b.WriteString("  " + domain + ":\n")
