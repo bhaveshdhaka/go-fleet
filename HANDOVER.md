@@ -135,3 +135,16 @@ build-vs-deployed state warning (bookkeeping), `ops status` cosmetic
   repointed to the in-pod src toolchain (gitignored; host unaffected).
 - Corpus 48u **fail=0 skip=0** (600 assertions) incl. C22a/C22b; doctor
   ALL CLEAR; journaled `# verify ... wo=WO-22 result=OK`.
+
+## Journey tier institutionalized (2026-08-29, WO-22 close-out)
+
+- AGENTS.md rule 9: every user-facing feature ships journey units in the
+  same change; mutations ship refusal journeys; `scripts/*-journey-*.sh`
+  must pass at session close. Doctrine + inventory:
+  `lifecycle/JOURNEYS.md` (adding-a-journey recipe included).
+- Shared library `tests/lib/journey.sh` (one session plumbing repo-wide;
+  recv-by-id + jsonq-complete acceptance — the stdio non-flush lesson
+  lives there now); C22a/C22b/C22c + mcp-journey-live.sh refactored
+  onto it; C22d gate unit fails on plumbing drift or doctrine decay.
+- C22c grew the J6 permutation sweep (12 tool/arg shapes, "well-formed
+  answer" invariant). Corpus now 50u; journaled verify per close-out.

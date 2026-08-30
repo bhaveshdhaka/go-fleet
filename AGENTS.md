@@ -127,6 +127,12 @@ spine.
    Workorder authoring drift is reported by `./scripts/fleet check` /
    `next` (predicates P1-P6) with exact fix commands — it does not block;
    the promote gates remain the only hard blocks.
+9. Journey tier (WO-22, permanent — doctrine: lifecycle/JOURNEYS.md):
+   every user-facing feature ships its JOURNEY unit (a user story driven
+   through the real surface via tests/lib/journey.sh) in the SAME change;
+   mutating features ship refusal journeys proving every illegal path is
+   refused with the exact fix. No journey, no ship. Tier-1 live journeys
+   (scripts/*-journey-*.sh) must pass at session close.
 
 ## Execution tiers
 

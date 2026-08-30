@@ -20,7 +20,6 @@ BIN="$FLEET_ROOT/dist/fleet"
 
 scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
-OUT="$scratch/out"
 JQ="$scratch/jsonq"
 
 # jsonq (stdlib-only) for payload assertions
@@ -30,32 +29,10 @@ GO_BIN="${FLEET_TOOLCHAIN_PREFIX:-}/bin/go"
     "$GO_BIN" build -trimpath -o "$JQ" tests/lib/jsonq.go ) || {
   echo "LIVE-JOURNEY FAIL reason=jsonq-build"; exit 1; }
 
-fifo="$scratch/in"
-mkfifo "$fifo"
-"$BIN" mcp < "$fifo" > "$OUT" 2> "$scratch/err" &
-MCP_PID=$!
-exec 9>"$fifo"
-
-send() { printf '%s\n' "$1" >&9; }
-recv_for() {
-  local want="$1" deadline=$((SECONDS + 30)) cand
-  while (( SECONDS < deadline )); do
-    cand="$(grep -a -o "[{]\"jsonrpc\":\"2.0\",\"id\":$want,.*" "$OUT" 2>/dev/null | head -1)"
-    if [[ -n "$cand" ]]; then
-      printf '%s' "$cand" > "$scratch/cand.json"
-      if "$JQ" "$scratch/cand.json" valid > /dev/null 2>&1; then
-        printf '%s' "$cand"
-        return 0
-      fi
-    fi
-    sleep 0.2
-  done
-  return 1
-}
-call() { # id tool args
-  send "{\"jsonrpc\":\"2.0\",\"id\":$1,\"method\":\"tools/call\",\"params\":{\"name\":\"$2\",\"arguments\":$3}}"
-  recv_for "$1" > "$scratch/resp-$1.json"
-}
+# shared journey session plumbing (same code the corpus journeys run)
+source "$FLEET_ROOT/tests/lib/journey.sh"
+J_SCRATCH="$scratch"; J_JQ="$JQ"; J_RECV_TIMEOUT=30
+journey_session_open "$BIN" ""   # repo="" -> resolve FLEET_ROOT from cwd/defaults
 
 rc=0
 step() { # name ok
@@ -63,41 +40,39 @@ step() { # name ok
   else printf 'LIVE-JOURNEY FAIL %s\n' "$1"; rc=1; fi
 }
 
-send '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"live-journey","version":"0"}}}'
-recv_for 1 > "$scratch/resp-1.json"; step "handshake" "$?"
-send '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+journey_handshake; step "handshake" "$?"
 
 # J1 morning triage on the LIVE estate
-call 2 fleet_status '{}'
+journey_call 2 fleet_status '{}'
 n="$( "$JQ" "$scratch/resp-2.json" len .result.structuredContent.components 2>/dev/null )"
 [[ "${n:-0}" -ge 1 ]]; step "J1 live status answers (components=$n)" "$?"
 
-call 3 fleet_doctor '{}'
+journey_call 3 fleet_doctor '{}'
 ok="$( "$JQ" "$scratch/resp-3.json" str .result.structuredContent.ok 2>/dev/null )"
 [[ "$ok" == "true" ]]; step "J1 live doctor ok=true (estate ALL CLEAR)" "$?"
 
-call 4 fleet_next '{}'
+journey_call 4 fleet_next '{}'
 a="$( "$JQ" "$scratch/resp-4.json" str .result.structuredContent.action 2>/dev/null )"
 [[ -n "$a" ]]; step "J1 live next gives an action ($a)" "$?"
 
 # J2 context assembly on the LIVE workorders + journal
-call 5 fleet_wo_show '{"id":"WO-22"}'
+journey_call 5 fleet_wo_show '{"id":"WO-22"}'
 "$JQ" "$scratch/resp-5.json" match .result.content.0.text "WO-22" > /dev/null 2>&1
 step "J2 live wo show returns the MCP workorder" "$?"
 
-send '{"jsonrpc":"2.0","id":6,"method":"resources/read","params":{"uri":"fleet://lifecycle/journal"}}'
-recv_for 6 > "$scratch/resp-6.json"
+journey_send '{"jsonrpc":"2.0","id":6,"method":"resources/read","params":{"uri":"fleet://lifecycle/journal"}}'
+journey_recv 6 > "$scratch/resp-6.json"
 "$JQ" "$scratch/resp-6.json" match .result.contents.0.text "verify" > /dev/null 2>&1
 step "J2 live journal resource carries verify history" "$?"
 
 # J3 the estate's site observation answers (may report cluster reachable)
-call 7 ops_status '{}'
-grep -q '"id":7' "$OUT" && grep -q 'structuredContent\|isError' "$scratch/resp-7.json"
+journey_call 7 ops_status '{}'
+[[ -s "$scratch/resp-7.json" ]] && journey_well_formed 7
 step "J3 live ops_status answers (JSON or honest isError)" "$?"
 
-exec 9>&-
-wait "$MCP_PID" 2>/dev/null
-[[ "$?" -eq 0 ]]; step "clean EOF exit" "$?"
+journey_session_close
+rc_last=$?
+[[ "$rc_last" -eq 0 ]]; step "clean EOF exit + quiet stderr" "$rc_last"
 
 [[ "$rc" -eq 0 ]] && echo "LIVE-JOURNEY OK" || echo "LIVE-JOURNEY FAIL"
 exit "$rc"

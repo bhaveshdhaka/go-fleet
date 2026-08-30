@@ -18,7 +18,7 @@ CANARY="MCPGUARD-$(head -c 8 /dev/urandom | od -An -tx1 | tr -d ' \n')-0xDEAD"
 # od is fine; keep the canary free of regex-active chars for greps
 CANARY="MCPGUARD$(date +%s)x"
 
-# --- jsonq: parse gate for recv_for + canary greps
+# --- jsonq: parse gate for journey_recv + canary greps
 jsonq_build "$scratch/jsonq" || { report_fail "jsonq builds" "go build failed"; finalize; }
 J="$scratch/jsonq"
 
@@ -77,59 +77,39 @@ grep -q "$CANARY" "$secret_home/cloudflare.env" \
   && report_pass "negative control: canary seeded in secrets home" \
   || report_fail "negative control: canary seeded in secrets home" "canary missing on disk"
 
-# --- drive the server: every read tool + every resource
-fifo="$scratch/in"
-OUT="$scratch/out"
-mkfifo "$fifo"
-PATH="$scratch/bin:$PATH" FLEET_ROOT="$repo" FLEET_SECRETS_HOME="$scratch/secrets-home" \
-  "$F" mcp < "$fifo" > "$OUT" 2> "$scratch/err" &
-MCP_PID=$!
-exec 9>"$fifo"
+# --- drive the server: every read tool + every resource (shared journey
+# library; the fake kubectl PATH + secrets seam are inherited by the child)
+source "$FLEET_ROOT/tests/lib/journey.sh"
+J_SCRATCH="$scratch"; J_JQ="$J"
+export PATH="$scratch/bin:$PATH" FLEET_SECRETS_HOME="$scratch/secrets-home"
+journey_session_open "$F" "$repo"
 
-send() { printf '%s\n' "$1" >&9; }
-recv_for() { # poll by id; response is final once jsonq parses it whole
-  local want="$1" deadline=$((SECONDS + 20)) cand
-  while (( SECONDS < deadline )); do
-    cand="$(grep -a -o "[{]\"jsonrpc\":\"2.0\",\"id\":$want,.*" "$OUT" 2>/dev/null | head -1)"
-    if [[ -n "$cand" ]]; then
-      printf '%s' "$cand" > "$scratch/cand.json"
-      if "$J" "$scratch/cand.json" valid > /dev/null 2>&1; then
-        printf '%s' "$cand"
-        return 0
-      fi
-    fi
-    sleep 0.2
-  done
-  return 1
-}
-
-send '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"c22b","version":"0"}}}'
-recv_for 1 > "$scratch/resp-1.json" || report_fail "initialize" "no response"
-send '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+journey_send '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"c22b","version":"0"}}}'
+journey_recv 1 > "$scratch/resp-1.json" || report_fail "initialize" "no response"
+journey_send '{"jsonrpc":"2.0","method":"notifications/initialized"}'
 
 id=10
 for tool in fleet_status fleet_next fleet_check fleet_sites fleet_wo_list ops_status; do
   id=$((id + 1))
-  send "{\"jsonrpc\":\"2.0\",\"id\":$id,\"method\":\"tools/call\",\"params\":{\"name\":\"$tool\",\"arguments\":{}}}"
-  recv_for "$id" > "$scratch/resp-$id.json" || report_fail "tool $tool called" "no response"
+  journey_send "{\"jsonrpc\":\"2.0\",\"id\":$id,\"method\":\"tools/call\",\"params\":{\"name\":\"$tool\",\"arguments\":{}}}"
+  journey_recv "$id" > "$scratch/resp-$id.json" || report_fail "tool $tool called" "no response"
 done
 
 id=$((id + 1))
-send "{\"jsonrpc\":\"2.0\",\"id\":$id,\"method\":\"tools/call\",\"params\":{\"name\":\"fleet_wo_show\",\"arguments\":{\"id\":\"WO-1\"}}}"
-recv_for "$id" > "$scratch/resp-$id.json" || report_fail "fleet_wo_show called" "no response"
+journey_send "{\"jsonrpc\":\"2.0\",\"id\":$id,\"method\":\"tools/call\",\"params\":{\"name\":\"fleet_wo_show\",\"arguments\":{\"id\":\"WO-1\"}}}"
+journey_recv "$id" > "$scratch/resp-$id.json" || report_fail "fleet_wo_show called" "no response"
 
 id=$((id + 1))
-send "{\"jsonrpc\":\"2.0\",\"id\":$id,\"method\":\"tools/call\",\"params\":{\"name\":\"fleet_wo_show\",\"arguments\":{\"id\":\"WO-22\"}}}"
-recv_for "$id" > "$scratch/resp-$id.json" || report_fail "fleet_wo_show WO-22 called" "no response"
+journey_send "{\"jsonrpc\":\"2.0\",\"id\":$id,\"method\":\"tools/call\",\"params\":{\"name\":\"fleet_wo_show\",\"arguments\":{\"id\":\"WO-22\"}}}"
+journey_recv "$id" > "$scratch/resp-$id.json" || report_fail "fleet_wo_show WO-22 called" "no response"
 
 for uri in fleet://lifecycle/journal fleet://registry/projects fleet://registry/state fleet://registry/sites fleet://lifecycle/gates; do
   id=$((id + 1))
-  send "{\"jsonrpc\":\"2.0\",\"id\":$id,\"method\":\"resources/read\",\"params\":{\"uri\":\"$uri\"}}"
-  recv_for "$id" > "$scratch/resp-$id.json" || report_fail "resource $uri read" "no response"
+  journey_send "{\"jsonrpc\":\"2.0\",\"id\":$id,\"method\":\"resources/read\",\"params\":{\"uri\":\"$uri\"}}"
+  journey_recv "$id" > "$scratch/resp-$id.json" || report_fail "resource $uri read" "no response"
 done
 
-exec 9>&-
-wait "$MCP_PID" 2>/dev/null
+journey_session_close
 
 # --- THE GUARD: canary value must not appear anywhere in server output
 cat "$scratch/out" "$scratch/err" "$scratch"/resp-*.json > "$scratch/all-output.txt" 2>/dev/null

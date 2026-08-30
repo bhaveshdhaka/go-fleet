@@ -102,38 +102,19 @@ pieces:
 Body text for the context-assembly journey.
 EOF
 
-# --- session plumbing (same contract as C22a/C22b)
-fifo="$scratch/in"
-OUT="$scratch/out"
-mkfifo "$fifo"
-FLEET_ROOT="$repo" "$F" mcp < "$fifo" > "$OUT" 2> "$scratch/err" &
-MCP_PID=$!
-exec 9>"$fifo"
+# --- session plumbing: SHARED journey library (AGENTS rule 9)
+source "$FLEET_ROOT/tests/lib/journey.sh"
+J_SCRATCH="$scratch"; J_JQ="$J"
+journey_session_open "$F" "$repo"
 
-send() { printf '%s\n' "$1" >&9; }
-recv_for() { # $1=id -> complete response line (grep + jsonq-valid gate)
-  local want="$1" deadline=$((SECONDS + 20)) cand
-  while (( SECONDS < deadline )); do
-    cand="$(grep -a -o "[{]\"jsonrpc\":\"2.0\",\"id\":$want,.*" "$OUT" 2>/dev/null | head -1)"
-    if [[ -n "$cand" ]]; then
-      printf '%s' "$cand" > "$scratch/cand.json"
-      if "$J" "$scratch/cand.json" valid > /dev/null 2>&1; then
-        printf '%s' "$cand"
-        return 0
-      fi
-    fi
-    sleep 0.2
-  done
-  return 1
-}
 call() { # $1=id $2=tool $3=arguments-json
-  send "{\"jsonrpc\":\"2.0\",\"id\":$1,\"method\":\"tools/call\",\"params\":{\"name\":\"$2\",\"arguments\":$3}}"
-  recv_for "$1" > "$scratch/resp-$1.json"
+  journey_send "{\"jsonrpc\":\"2.0\",\"id\":$1,\"method\":\"tools/call\",\"params\":{\"name\":\"$2\",\"arguments\":$3}}"
+  journey_recv "$1" > "$scratch/resp-$1.json"
 }
 
-send '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"c22c-journeys","version":"0"}}}'
-recv_for 1 > "$scratch/resp-1.json" || report_fail "initialize" "no response"
-send '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+journey_send '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"c22c-journeys","version":"0"}}}'
+journey_recv 1 > "$scratch/resp-1.json" || report_fail "initialize" "no response"
+journey_send '{"jsonrpc":"2.0","method":"notifications/initialized"}'
 
 # JOURNEY 1 — morning triage: status -> doctor -> next
 # user story: "I just sat down. Is anything broken? What am I supposed to do?"
@@ -182,21 +163,21 @@ call 12 fleet_wo_show '{"id":"WO-2"}'
 "$J" "$scratch/resp-12.json" match .result.content.0.text "Body text for the context-assembly journey" > /dev/null 2>&1 \
   && report_pass "J3: wo show returns the full brief" \
   || report_fail "J3: wo show returns the full brief" "body missing"
-send '{"jsonrpc":"2.0","id":13,"method":"resources/read","params":{"uri":"fleet://lifecycle/journal"}}'
-recv_for 13 > "$scratch/resp-13.json"
+journey_send '{"jsonrpc":"2.0","id":13,"method":"resources/read","params":{"uri":"fleet://lifecycle/journal"}}'
+journey_recv 13 > "$scratch/resp-13.json"
 "$J" "$scratch/resp-13.json" match .result.contents.0.text "promote component=beta" > /dev/null 2>&1 \
   && report_pass "J3: journal resource carries the transition history" \
   || report_fail "J3: journal resource carries the transition history" "promote line missing"
 
 # JOURNEY 4 — pipelined batching: fire three calls WITHOUT waiting
 # (real clients pipeline); all three must return, complete, by id.
-send '{"jsonrpc":"2.0","id":21,"method":"tools/call","params":{"name":"fleet_status","arguments":{}}}'
-send '{"jsonrpc":"2.0","id":22,"method":"tools/call","params":{"name":"fleet_next","arguments":{}}}'
-send '{"jsonrpc":"2.0","id":23,"method":"tools/call","params":{"name":"fleet_check","arguments":{}}}'
+journey_send '{"jsonrpc":"2.0","id":21,"method":"tools/call","params":{"name":"fleet_status","arguments":{}}}'
+journey_send '{"jsonrpc":"2.0","id":22,"method":"tools/call","params":{"name":"fleet_next","arguments":{}}}'
+journey_send '{"jsonrpc":"2.0","id":23,"method":"tools/call","params":{"name":"fleet_check","arguments":{}}}'
 r21=0; r22=0; r23=0
-recv_for 21 > "$scratch/resp-21.json" && r21=1
-recv_for 22 > "$scratch/resp-22.json" && r22=1
-recv_for 23 > "$scratch/resp-23.json" && r23=1
+journey_recv 21 > "$scratch/resp-21.json" && r21=1
+journey_recv 22 > "$scratch/resp-22.json" && r22=1
+journey_recv 23 > "$scratch/resp-23.json" && r23=1
 assert_eq "J4: all three pipelined calls answered" "3" "$((r21 + r22 + r23))"
 ncomp="$(cat "$scratch/resp-21.json" | "$J" /dev/stdin len .result.structuredContent.components 2>/dev/null)"
 assert_eq "J4: pipelined status payload intact" "2" "$ncomp"
@@ -214,11 +195,38 @@ grep -q '"isError":true' "$scratch/resp-24.json" \
   && report_pass "J5: error text names the actual problem" \
   || report_fail "J5: error text names the actual problem" "$(head -c 160 "$scratch/resp-24.json")"
 
-# shutdown: clean EOF exit
-exec 9>&-
-wait "$MCP_PID" 2>/dev/null
-assert_eq "server exits cleanly on stdin EOF" "0" "$?"
-[[ -s "$scratch/err" ]] && report_fail "server stderr is quiet" "$(head -3 "$scratch/err")" \
-  || report_pass "server stderr is quiet"
+# JOURNEY 6 — full-surface permutation sweep: EVERY tool x its arg shape.
+# The invariant: whatever you ask, the answer is well-formed — structured
+# content, non-empty text, or an isError that says why. Never empty,
+# never a hang, never a crash. (C22a pins the SET; this pins the SHAPE.)
+id=30
+sweep_bad=""
+sweep_tool() { # <tool> <args> <expect: ok|error>
+  id=$((id + 1))
+  call "$id" "$1" "$2"
+  if ! journey_well_formed "$id"; then
+    sweep_bad="${sweep_bad}$1 "
+  fi
+}
+sweep_tool fleet_status   '{}'                          ok
+sweep_tool fleet_doctor   '{}'                          ok
+sweep_tool fleet_next     '{}'                          ok
+sweep_tool fleet_check    '{}'                          ok
+sweep_tool fleet_sites    '{}'                          ok
+sweep_tool fleet_wo_list  '{}'                          ok
+sweep_tool fleet_wo_show  '{"id":"WO-2"}'               ok
+sweep_tool fleet_wo_show  '{"id":"NOSUCH"}'             error
+sweep_tool ops_status     '{}'                          error
+sweep_tool ops_doctor     '{}'                          error
+sweep_tool ops_dns        '{}'                          error
+sweep_tool ops_status     '{"site":"ghost"}'            error
+if [[ -z "$sweep_bad" ]]; then
+  report_pass "J6: permutation sweep — 12 tool/arg shapes all well-formed"
+else
+  report_fail "J6: permutation sweep — 12 tool/arg shapes all well-formed" "malformed: $sweep_bad"
+fi
+
+# shutdown: clean EOF exit + quiet stderr
+journey_session_close
 
 finalize

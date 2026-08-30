@@ -147,3 +147,4 @@ ts=2026-08-29T09:18:29Z event=promoted component=fleethub from=stage to=prod act
 # mcp live journey ts=2026-08-30T04:55:02Z surface=fleet-mcp-stdio journeys=triage,doctor,next,wo-show,journal,ops-status result=OK evidence=scripts/mcp-journey-live.sh
 # verify ts=2026-08-30T04:55:52Z wo=WO-22 units=49 pass=82 fail=1 skip=41 result=FAIL
 # verify ts=2026-08-30T05:01:09Z wo=WO-22 units=49 pass=616 fail=0 skip=1 result=OK
+# verify ts=2026-08-30T05:19:34Z wo=WO-22 units=50 pass=636 fail=0 skip=1 result=OK

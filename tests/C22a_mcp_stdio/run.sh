@@ -58,46 +58,23 @@ printf '# WO-1 — fixture workorder\n\nBody.\n' > "$repo/workorders/WO-1.md"
 jsonq_build "$scratch/jsonq" || { report_fail "jsonq builds" "go build failed"; finalize; }
 J="$scratch/jsonq"
 
-# --- stdio session: hold stdin open; poll responses by id. The SDK does
-# NOT line-flush stdout — response bytes appear incrementally and a
-# message's trailing newline can lag behind its JSON. So: grep for the id
-# prefix (grep matches an unterminated last line), then accept it only
-# once jsonq parses it as complete JSON.
-fifo="$scratch/in"
-OUT="$scratch/out"
-mkfifo "$fifo"
-FLEET_ROOT="$repo" "$F" mcp < "$fifo" > "$OUT" 2> "$scratch/err" &
-MCP_PID=$!
-exec 9>"$fifo"
+# --- stdio session via the SHARED journey library (AGENTS rule 9: one
+# session plumbing for every journey unit; journey_recv polls by id and
+# accepts only jsonq-complete JSON — the SDK does NOT line-flush stdout)
+source "$FLEET_ROOT/tests/lib/journey.sh"
+J_SCRATCH="$scratch"; J_JQ="$J"
+journey_session_open "$F" "$repo"
 
-send() { printf '%s\n' "$1" >&9; }
+save_resp() { journey_recv "$1" > "$scratch/resp-$1.json"; }
 
-recv_for() { # $1 = numeric request id -> echoes the complete response line
-  local want="$1" deadline=$((SECONDS + 20)) cand
-  while (( SECONDS < deadline )); do
-    cand="$(grep -a -o "[{]\"jsonrpc\":\"2.0\",\"id\":$want,.*" "$OUT" 2>/dev/null | head -1)"
-    if [[ -n "$cand" ]]; then
-      printf '%s' "$cand" > "$scratch/cand.json"
-      if "$J" "$scratch/cand.json" valid > /dev/null 2>&1; then
-        printf '%s' "$cand"
-        return 0
-      fi
-    fi
-    sleep 0.2
-  done
-  return 1
-}
-
-save_resp() { recv_for "$1" > "$scratch/resp-$1.json"; }
-
-send '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"c22a","version":"0"}}}'
+journey_send '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"c22a","version":"0"}}}'
 if save_resp 1; then report_pass "initialize responds"; else report_fail "initialize responds" "no response for id=1"; fi
-send '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+journey_send '{"jsonrpc":"2.0","method":"notifications/initialized"}'
 
 name="$("$J" "$scratch/resp-1.json" str .result.serverInfo.name 2>/dev/null)"
 assert_eq "serverInfo.name == fleet" "fleet" "$name"
 
-send '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+journey_send '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
 if save_resp 2; then report_pass "tools/list responds"; else report_fail "tools/list responds" "no response for id=2"; fi
 tl="$scratch/resp-2.json"
 
@@ -130,7 +107,7 @@ else
 fi
 
 # --- fleet_status: --json truth flows through as structuredContent
-send '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"fleet_status","arguments":{}}}'
+journey_send '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"fleet_status","arguments":{}}}'
 if save_resp 3; then report_pass "tools/call fleet_status responds"; else report_fail "tools/call fleet_status responds" "no response for id=3"; fi
 st="$scratch/resp-3.json"
 ncomp="$("$J" "$st" len .result.structuredContent.components 2>/dev/null)"
@@ -142,7 +119,7 @@ assert_eq "component truth matches registry" "cli" "$kind"
   || report_fail "fleet_status also carries text content" "no content block"
 
 # --- fleet_next: action string present
-send '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"fleet_next","arguments":{}}}'
+journey_send '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"fleet_next","arguments":{}}}'
 if save_resp 4; then
   action="$("$J" "$scratch/resp-4.json" str .result.structuredContent.action 2>/dev/null)"
   [[ -n "$action" ]] && report_pass "fleet_next returns an action" \
@@ -152,7 +129,7 @@ else
 fi
 
 # --- ops_status with no sites registry: honest isError, not a crash
-send '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"ops_status","arguments":{}}}'
+journey_send '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"ops_status","arguments":{}}}'
 if save_resp 5; then
   grep -q '"isError":true' "$scratch/resp-5.json" \
     && report_pass "ops refusal surfaces as isError" \
@@ -162,7 +139,7 @@ else
 fi
 
 # --- text verb: wo show
-send '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"fleet_wo_show","arguments":{"id":"WO-1"}}}'
+journey_send '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"fleet_wo_show","arguments":{"id":"WO-1"}}}'
 if save_resp 6; then
   "$J" "$scratch/resp-6.json" match .result.content.0.text "# WO-1" >/dev/null 2>&1 \
     && report_pass "fleet_wo_show returns workorder text" \
@@ -172,7 +149,7 @@ else
 fi
 
 # --- invalid workorder id: isError
-send '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"fleet_wo_show","arguments":{"id":"../escape"}}}'
+journey_send '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"fleet_wo_show","arguments":{"id":"../escape"}}}'
 if save_resp 7; then
   grep -q '"isError":true' "$scratch/resp-7.json" \
     && report_pass "path traversal id refused as isError" \
@@ -182,7 +159,7 @@ else
 fi
 
 # --- resources
-send '{"jsonrpc":"2.0","id":8,"method":"resources/list"}'
+journey_send '{"jsonrpc":"2.0","id":8,"method":"resources/list"}'
 if save_resp 8; then
   nres="$("$J" "$scratch/resp-8.json" len .result.resources 2>/dev/null)"
   assert_eq "5 contract resources exposed" "5" "$nres"
@@ -190,7 +167,7 @@ else
   report_fail "5 contract resources exposed" "no response for id=8"
 fi
 
-send '{"jsonrpc":"2.0","id":9,"method":"resources/read","params":{"uri":"fleet://lifecycle/journal"}}'
+journey_send '{"jsonrpc":"2.0","id":9,"method":"resources/read","params":{"uri":"fleet://lifecycle/journal"}}'
 if save_resp 9; then
   "$J" "$scratch/resp-9.json" match .result.contents.0.text "c22a fixture journal seed" >/dev/null 2>&1 \
     && report_pass "journal resource readable" \
@@ -199,7 +176,7 @@ else
   report_fail "journal resource readable" "no response for id=9"
 fi
 
-send '{"jsonrpc":"2.0","id":10,"method":"resources/read","params":{"uri":"fleet://registry/unknown"}}'
+journey_send '{"jsonrpc":"2.0","id":10,"method":"resources/read","params":{"uri":"fleet://registry/unknown"}}'
 if save_resp 10; then
   grep -q '"error"' "$scratch/resp-10.json" \
     && report_pass "unknown resource URI is a JSON-RPC error" \
@@ -208,13 +185,7 @@ else
   report_fail "unknown resource URI is a JSON-RPC error" "no response for id=10"
 fi
 
-# --- shutdown: close stdin; server must exit cleanly (EOF, not crash)
-exec 9>&-
-wait "$MCP_PID" 2>/dev/null
-src=$?
-assert_eq "server exits cleanly on stdin EOF" "0" "$src"
-
-[[ -s "$scratch/err" ]] && report_fail "server stderr is quiet" "$(head -3 "$scratch/err")" \
-  || report_pass "server stderr is quiet"
+# --- shutdown: clean EOF exit + quiet stderr (journey_session_close)
+journey_session_close
 
 finalize
