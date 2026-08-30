@@ -169,7 +169,7 @@ Do not run any mutating fleet command beyond this
 1. Register the fleet repo as an openchamber project so it appears in
    the UI. Mechanics: openchamber keeps projects in the `projects`
    array of `~/.config/openchamber/settings.json`; each entry is
-   `{id: "path_<unpadded-base64-of-path>", path: "/root/workspaces/fleet",
+   `{id: "path_<unpadded-base64-of-path>", path: "/home/openchamber/workspaces/fleet",
    label: "fleet", addedAt: <ms>}` (copy the shape of an existing
    entry). Verify with `openchamber projects --json` — the path must
    list. (`openchamber session create --dir <path>` also works and
